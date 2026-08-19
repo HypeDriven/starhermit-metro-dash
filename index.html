@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#141a30">
+  <title>Metro Dash</title>
+  <meta name="description" content="Metro Dash — switch lanes, jump, and slide through a stylized transit city racing from dawn to night.">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23141a30'/><rect x='6' y='20' width='20' height='4' fill='%23ffc94d'/><rect x='8' y='8' width='4' height='10' fill='%23ff5a3c'/><rect x='14' y='5' width='4' height='13' fill='%23ff5a3c'/><rect x='20' y='10' width='4' height='8' fill='%23ff5a3c'/></svg>">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to game</a>
+  <div id="app">
+    <header id="topbar" aria-label="Status">
+      <span id="brand" aria-hidden="true">METRO&nbsp;DASH</span>
+      <span id="profile-chip" class="chip">Guest</span>
+      <span id="clock-chip" class="chip" title="Server-synced time"></span>
+      <button id="btn-audio-toggle" class="icon-btn" aria-label="Toggle sound" aria-pressed="true">♪</button>
+    </header>
+
+    <main id="main">
+      <div id="canvas-host" aria-hidden="true"></div>
+
+      <!-- Play HUD -->
+      <div id="hud" hidden>
+        <div id="hud-left" class="hud-rail">
+          <h2 id="hud-objective-label" class="rail-heading">Objective</h2>
+          <p id="hud-objective" aria-live="polite"></p>
+          <div id="hud-progress-wrap" role="progressbar" aria-label="Objective progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div id="hud-progress-bar"></div>
+          </div>
+          <p id="hud-moves" hidden></p>
+        </div>
+        <div id="hud-right" class="hud-rail">
+          <dl id="hud-stats">
+            <div><dt>Score</dt><dd id="hud-score">0</dd></div>
+            <div><dt>Distance</dt><dd id="hud-distance">0</dd></div>
+            <div><dt>Tokens</dt><dd id="hud-coins">0</dd></div>
+            <div><dt>Speed</dt><dd id="hud-speed">–</dd></div>
+          </dl>
+        </div>
+        <button id="btn-pause" class="icon-btn" aria-label="Pause (Esc)">⏸</button>
+        <div id="action-tray" aria-label="Touch controls">
+          <button class="tray-btn" data-action="left" aria-label="Move left">◀</button>
+          <button class="tray-btn" data-action="jump" aria-label="Jump">▲</button>
+          <button class="tray-btn" data-action="slide" aria-label="Slide">▼</button>
+          <button class="tray-btn" data-action="right" aria-label="Move right">▶</button>
+        </div>
+      </div>
+
+      <div id="screens">
+        <!-- Title -->
+        <section id="screen-title" class="screen" aria-labelledby="title-h">
+          <h1 id="title-h">Metro Dash</h1>
+          <p class="tagline">Three lanes. One city. Dawn to night.</p>
+          <nav class="menu" aria-label="Main menu">
+            <button id="btn-play" class="btn primary">Play Daily Run</button>
+            <button id="btn-journey" class="btn">Journey</button>
+            <button id="btn-learn" class="btn">Learn</button>
+            <button id="btn-practice" class="btn">Practice</button>
+            <button id="btn-challenge" class="btn">Challenges</button>
+            <button id="btn-scores" class="btn">Scores</button>
+            <button id="btn-settings" class="btn">Settings</button>
+            <button id="btn-help" class="btn">How to Play</button>
+          </nav>
+          <p id="title-progress" class="muted"></p>
+          <p id="webgl-warning" class="warning" hidden>3D graphics unavailable — running in compatibility mode. Your progress is safe.</p>
+        </section>
+
+        <!-- Journey -->
+        <section id="screen-journey" class="screen" hidden aria-labelledby="journey-h">
+          <h2 id="journey-h">Journey</h2>
+          <p class="muted">40 stages. New traffic mechanics arrive one at a time; every fifth stage is a mastery test.</p>
+          <div id="journey-grid" class="card-grid" role="list"></div>
+          <button class="btn back" data-back>Back</button>
+        </section>
+
+        <!-- Learn -->
+        <section id="screen-learn" class="screen" hidden aria-labelledby="learn-h">
+          <h2 id="learn-h">Learn</h2>
+          <p class="muted">Interactive lessons. Each one teaches a single rule — and makes you use it.</p>
+          <div id="lesson-list" class="card-list" role="list"></div>
+          <button class="btn back" data-back>Back</button>
+        </section>
+
+        <!-- Challenge -->
+        <section id="screen-challenge" class="screen" hidden aria-labelledby="ch-h">
+          <h2 id="ch-h">Challenges</h2>
+          <p class="muted">Constrained runs: restricted tools, move budgets, express speed.</p>
+          <div id="challenge-list" class="card-list" role="list"></div>
+          <button class="btn back" data-back>Back</button>
+        </section>
+
+        <!-- Practice setup -->
+        <section id="screen-practice" class="screen" hidden aria-labelledby="pr-h">
+          <h2 id="pr-h">Practice</h2>
+          <p class="muted">Unranked. Rewind allowed. No effect on ratings or boards.</p>
+          <fieldset id="practice-difficulty">
+            <legend>Difficulty</legend>
+            <label><input type="radio" name="difficulty" value="relaxed"> Relaxed</label>
+            <label><input type="radio" name="difficulty" value="standard" checked> Standard</label>
+            <label><input type="radio" name="difficulty" value="intense"> Intense</label>
+          </fieldset>
+          <div class="row">
+            <button id="btn-practice-start" class="btn primary">Start Practice</button>
+            <button class="btn back" data-back>Back</button>
+          </div>
+        </section>
+
+        <!-- Mode setup / briefing -->
+        <section id="screen-setup" class="screen" hidden aria-labelledby="setup-h">
+          <h2 id="setup-h">Briefing</h2>
+          <dl id="setup-facts" class="facts"></dl>
+          <p id="setup-briefing"></p>
+          <div class="row">
+            <button id="btn-setup-start" class="btn primary">Start</button>
+            <button class="btn back" data-back>Back</button>
+          </div>
+        </section>
+
+        <!-- Results -->
+        <section id="screen-results" class="screen" hidden aria-labelledby="results-h">
+          <h2 id="results-h">Run Over</h2>
+          <p id="results-headline" class="headline"></p>
+          <table id="results-table" aria-label="Score breakdown">
+            <thead><tr><th>Component</th><th>Points</th></tr></thead>
+            <tbody></tbody>
+            <tfoot><tr><th>Total</th><td id="results-total"></td></tr></tfoot>
+          </table>
+          <p id="results-comparison" class="muted"></p>
+          <p id="results-achievements" class="achievements"></p>
+          <div class="row">
+            <button id="btn-retry" class="btn primary">Retry</button>
+            <button id="btn-next" class="btn" hidden>Next Stage</button>
+            <button id="btn-results-menu" class="btn">Menu</button>
+          </div>
+        </section>
+
+        <!-- Scores -->
+        <section id="screen-scores" class="screen" hidden aria-labelledby="scores-h">
+          <h2 id="scores-h">Scores</h2>
+          <div class="row" role="group" aria-label="Leaderboard filter">
+            <button class="btn small filter-btn" data-filter="all">All Runs</button>
+            <button class="btn small filter-btn" data-filter="daily">Daily</button>
+            <button class="btn small filter-btn" data-filter="mine">Mine</button>
+          </div>
+          <p class="muted" id="scores-note">Local board (casual) — global validation requires hosting.</p>
+          <table id="scores-table" aria-label="Leaderboard">
+            <thead><tr><th>#</th><th>Score</th><th>Mode</th><th>Distance</th><th>Date</th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <button class="btn back" data-back>Back</button>
+        </section>
+
+        <!-- Help -->
+        <section id="screen-help" class="screen" hidden aria-labelledby="help-h">
+          <h2 id="help-h">How to Play</h2>
+          <div id="help-cards" class="card-list"></div>
+          <h3>Rules</h3>
+          <ul>
+            <li><strong>Barrier</strong> (striped, low) — jump over it or change lane.</li>
+            <li><strong>Sign</strong> (overhead panel) — slide under it or change lane.</li>
+            <li><strong>Kiosk</strong> (full height) — change lane; jumping and sliding won't help.</li>
+            <li><strong>Tokens</strong> — score bonus; high tokens need a jump.</li>
+            <li>Speed rises with distance. One crash ends the run.</li>
+          </ul>
+          <button class="btn back" data-back>Back</button>
+        </section>
+
+        <!-- Settings -->
+        <section id="screen-settings" class="screen" hidden aria-labelledby="settings-h">
+          <h2 id="settings-h">Settings</h2>
+          <div id="settings-form">
+            <fieldset>
+              <legend>Audio</legend>
+              <label>Music <input type="range" id="set-music" min="0" max="1" step="0.05"></label>
+              <label>Effects <input type="range" id="set-effects" min="0" max="1" step="0.05"></label>
+              <label>Ambience <input type="range" id="set-ambience" min="0" max="1" step="0.05"></label>
+              <label>Voice cues <input type="range" id="set-voice" min="0" max="1" step="0.05"></label>
+            </fieldset>
+            <fieldset>
+              <legend>Graphics</legend>
+              <label>Quality
+                <select id="set-quality">
+                  <option value="auto">Auto</option>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </label>
+              <label><input type="checkbox" id="set-reduced-motion"> Reduced motion</label>
+              <label><input type="checkbox" id="set-high-contrast"> High contrast</label>
+              <label>Color palette
+                <select id="set-palette">
+                  <option value="standard">Standard</option>
+                  <option value="deuteranopia">Deuteranopia-safe</option>
+                  <option value="protanopia">Protanopia-safe</option>
+                  <option value="tritanopia">Tritanopia-safe</option>
+                </select>
+              </label>
+            </fieldset>
+            <fieldset>
+              <legend>Accessibility &amp; Controls</legend>
+              <label><input type="checkbox" id="set-large-text"> Larger text</label>
+              <label><input type="checkbox" id="set-left-handed"> Left-handed touch tray</label>
+              <label><input type="checkbox" id="set-hints"> Show hints</label>
+              <div id="bindings-list"></div>
+              <p class="muted">Select a binding, then press a key to remap.</p>
+            </fieldset>
+            <fieldset>
+              <legend>Data</legend>
+              <label><input type="checkbox" id="set-consent"> Share anonymous usage stats</label>
+              <button id="btn-reset-data" class="btn small danger">Reset local progress</button>
+            </fieldset>
+          </div>
+          <button class="btn back" data-back>Back</button>
+        </section>
+      </div>
+
+      <!-- Pause overlay -->
+      <div id="overlay-pause" class="overlay" hidden role="dialog" aria-modal="true" aria-labelledby="pause-h">
+        <div class="panel">
+          <h2 id="pause-h">Paused</h2>
+          <button id="btn-resume" class="btn primary">Resume</button>
+          <button id="btn-rewind" class="btn" hidden>Rewind 5s</button>
+          <button id="btn-pause-settings" class="btn">Settings</button>
+          <button id="btn-pause-help" class="btn">How to Play</button>
+          <button id="btn-pause-restart" class="btn">Restart</button>
+          <button id="btn-pause-quit" class="btn danger">End Run</button>
+        </div>
+      </div>
+
+      <!-- Countdown -->
+      <div id="overlay-countdown" class="overlay" hidden aria-live="assertive">
+        <div id="countdown-text" role="status"></div>
+      </div>
+
+      <!-- Interruption notice -->
+      <div id="overlay-interrupt" class="overlay" hidden role="dialog" aria-modal="true" aria-labelledby="interrupt-h">
+        <div class="panel">
+          <h2 id="interrupt-h">Welcome back</h2>
+          <p id="interrupt-summary"></p>
+          <button id="btn-interrupt-resume" class="btn primary">Resume run</button>
+          <button id="btn-interrupt-abandon" class="btn">Abandon run</button>
+        </div>
+      </div>
+
+      <div id="toast-region" aria-live="polite"></div>
+      <div id="sr-status" class="visually-hidden" role="status" aria-live="polite"></div>
+    </main>
+  </div>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

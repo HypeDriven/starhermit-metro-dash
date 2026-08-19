@@ -1,0 +1,12 @@
+{
+  "name": "metro-dash",
+  "version": "1.0.0",
+  "description": "Metro Dash — three-lane endless action in a stylized transit city, dawn to night.",
+  "type": "module",
+  "scripts": {
+    "test": "node test/rules.test.mjs",
+    "start": "node server.js"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}
