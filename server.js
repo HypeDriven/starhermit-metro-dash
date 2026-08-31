@@ -34,6 +34,7 @@ const MIME = {
   '.png': 'image/png',
   '.ico': 'image/x-icon',
   '.webmanifest': 'application/manifest+json',
+  '.opus': 'audio/ogg',
 };
 
 // in-memory daily boards: day -> sorted entries (restart loses them; a hosted

@@ -1,0 +1,74 @@
+[
+  {
+    "name": "lane-switch",
+    "seconds": 1,
+    "prompt": "Quick soft air whoosh of a runner darting sideways one lane, short light swish with a faint fabric flap.",
+    "event": "lane"
+  },
+  {
+    "name": "jump",
+    "seconds": 1,
+    "prompt": "Light bouncy leap sound, rising airy swoop with a soft shoe push-off from pavement.",
+    "event": "jump"
+  },
+  {
+    "name": "slide",
+    "seconds": 1,
+    "prompt": "Short gritty shoe slide scrape across asphalt, low friction scuff trailing off quickly.",
+    "event": "slide"
+  },
+  {
+    "name": "token-pickup",
+    "seconds": 1,
+    "prompt": "Bright metallic token plucked from the air, small coin clink with a clean ringing shimmer.",
+    "event": "coin"
+  },
+  {
+    "name": "near-miss",
+    "seconds": 1,
+    "prompt": "Fast airy pass-by whoosh of an obstacle rushing past very close, brief and sharp.",
+    "event": "dodge"
+  },
+  {
+    "name": "invalid-move",
+    "seconds": 1,
+    "prompt": "Dull muted wooden clunk, short dampened knock signaling a rejected action.",
+    "event": "invalid"
+  },
+  {
+    "name": "crash",
+    "seconds": 2,
+    "prompt": "Heavy body-impact thud into a metal barrier with clattering panel and tumbling debris.",
+    "event": "crash"
+  },
+  {
+    "name": "goal-reached",
+    "seconds": 2,
+    "prompt": "Four bright ascending mallet bell notes, cheerful celebratory finish-line flourish.",
+    "event": "goal"
+  },
+  {
+    "name": "countdown-beep",
+    "seconds": 1,
+    "prompt": "Single clean mid-pitched electronic countdown beep, short and precise.",
+    "event": "countdown"
+  },
+  {
+    "name": "go-signal",
+    "seconds": 1,
+    "prompt": "Higher sustained starter beep, clear race-start signal tone.",
+    "event": "go"
+  },
+  {
+    "name": "ui-tap",
+    "seconds": 1,
+    "prompt": "Soft plastic button press, gentle short UI tap click.",
+    "event": "ui"
+  },
+  {
+    "name": "achievement",
+    "seconds": 2,
+    "prompt": "Two-tone bright chime reward with a sparkling medal jingle, satisfying unlock sound.",
+    "event": "achievement"
+  }
+]

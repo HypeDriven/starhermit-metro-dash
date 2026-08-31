@@ -6,6 +6,23 @@
 
 import { Rng } from './rng.js';
 
+// Built-in event map keeps authored clips usable even if manifest.json is
+// unavailable; the fetched manifest can extend mappings in future versions.
+const AUTHORED_SFX_BY_EVENT = Object.freeze({
+  lane: 'lane-switch',
+  jump: 'jump',
+  slide: 'slide',
+  coin: 'token-pickup',
+  dodge: 'near-miss',
+  invalid: 'invalid-move',
+  crash: 'crash',
+  goal: 'goal-reached',
+  countdown: 'countdown-beep',
+  go: 'go-signal',
+  ui: 'ui-tap',
+  achievement: 'achievement',
+});
+
 export class AudioEngine {
   constructor(settings) {
     this.settings = settings;
@@ -17,6 +34,12 @@ export class AudioEngine {
     this.musicTimer = null;
     this.intensity = 0;
     this._musicStep = 0;
+    // authored one-shot samples (sfx/manifest.json); synthesis below stays as
+    // the fallback while a clip is still loading or failed to load
+    this._sfxByEvent = new Map(Object.entries(AUTHORED_SFX_BY_EVENT)); // event type -> clip basename
+    this._sfx = new Map();         // basename -> AudioBuffer | null (failed)
+    this._sfxLoading = new Map();  // basename -> in-flight decode Promise
+    this._manifestPromise = null;
   }
 
   unlock() {
@@ -36,6 +59,7 @@ export class AudioEngine {
         this.buses[name] = g;
       }
       this.unlocked = true;
+      this._loadManifest();
       this._startAmbience();
       if (this.musicOn) this._startMusic();
     } catch {
@@ -97,10 +121,68 @@ export class AudioEngine {
     src.start(t0);
   }
 
+  // --- authored samples ----------------------------------------------------------
+
+  _loadManifest() {
+    if (this._manifestPromise) return this._manifestPromise;
+    this._manifestPromise = (async () => {
+      try {
+        const res = await fetch('sfx/manifest.json');
+        if (!res.ok) return;
+        const list = await res.json();
+        if (!Array.isArray(list)) return;
+        for (const item of list) {
+          if (item && typeof item.name === 'string' && typeof item.event === 'string' && !this._sfxByEvent.has(item.event)) {
+            this._sfxByEvent.set(item.event, item.name);
+          }
+        }
+      } catch {
+        /* samples optional — synthesis fallback remains */
+      }
+    })();
+    return this._manifestPromise;
+  }
+
+  _loadSample(name) {
+    if (this._sfxLoading.has(name)) return this._sfxLoading.get(name);
+    const p = (async () => {
+      try {
+        const res = await fetch(`sfx/${name}.opus`);
+        if (!res.ok) throw new Error(`sfx ${name}: ${res.status}`);
+        const data = await res.arrayBuffer();
+        this._sfx.set(name, await this.ctx.decodeAudioData(data));
+      } catch {
+        this._sfx.set(name, null); // failed — synthesis stays the fallback
+      }
+      return this._sfx.get(name);
+    })();
+    this._sfxLoading.set(name, p);
+    return p;
+  }
+
+  _playSample(buffer, bus) {
+    if (!this.unlocked) return;
+    const src = this.ctx.createBufferSource();
+    src.buffer = buffer;
+    src.connect(this.buses[bus] || this.buses.effects);
+    src.start();
+  }
+
   // --- event mapping -----------------------------------------------------------
 
   event(type) {
     if (!this.unlocked) return;
+    // prefer the authored sample mapped to this event; fall back to synthesis
+    // while it is loading or if it failed to load
+    const name = this._sfxByEvent.get(type);
+    if (name) {
+      const buffer = this._sfx.get(name);
+      if (buffer) {
+        this._playSample(buffer, type === 'countdown' || type === 'go' ? 'voice' : 'effects');
+        return;
+      }
+      if (!this._sfx.has(name)) this._loadSample(name);
+    }
     const jitter = 1 + (this.rng.next() - 0.5) * 0.12;
     switch (type) {
       case 'lane':
