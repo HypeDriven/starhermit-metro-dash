@@ -1,5 +1,5 @@
 // Node test runner: rules legality, determinism/replay, serialization,
-// content validation. Run: node test/rules.test.mjs
+// content validation. Run: node tests/rules.test.mjs
 import {
   createInitialState, step, legalActions, legalActionMap, isLegal,
   serialize, deserialize, stateHash, totalScore, quitRun, replayEnvelope,

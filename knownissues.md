@@ -7,8 +7,8 @@ alongside the game's own unit tests and live probing of the running server in he
 
 | Check | Result |
 | --- | --- |
-| `npm test` (`node test/rules.test.mjs`) | 79/79 pass, 0 failures |
-| `node --check` on all modules (`js/*.js`, `server.js`, `test/rules.test.mjs`) | clean |
+| `npm test` (`node tests/rules.test.mjs`) | 79/79 pass, 0 failures |
+| `node --check` on all modules (`js/*.js`, `server.js`, `tests/rules.test.mjs`) | clean |
 | `tests/e2e.mjs` | not present |
 | Headless-Chrome boot + play-through (served on :39406) | PASS — title → Daily Run → run ends with a score breakdown; **0** console errors, 0 failed requests |
 | API fuzzing (`/api/v1/*`, malformed bodies, malformed percent-escapes) | server stayed up |
