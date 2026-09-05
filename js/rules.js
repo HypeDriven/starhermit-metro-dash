@@ -498,5 +498,5 @@ export function validateReplay(envelope) {
   const ok =
     !r ||
     (r.hash === hash && r.score === totalScore(state) && r.reason === state.reason && r.tick === state.tick);
-  return { ok, hash, score: totalScore(state), reason: state.reason, tick: state.tick };
+  return { ok, hash, score: totalScore(state), reason: state.reason, tick: state.tick, invalid: state.stats.invalidActions };
 }

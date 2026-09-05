@@ -87,21 +87,27 @@ async function handleDailySubmit(req, res) {
   if (Number.isNaN(info.seed)) return json(res, 400, { error: 'bad-day' });
   if (envelope.seed !== info.seed) return json(res, 422, { error: 'seed-mismatch' });
 
-  // idempotency: identical submissions (same sessionId) are accepted once
-  const sessionKey = `${day}:${envelope.result && envelope.sessionId}`;
+  // The authoritative config comes from the day's definition, not the client —
+  // a forged envelope.config must not be able to inflate a score.
+  envelope.config = info.config;
+
+  // idempotency: identical submissions (same sessionId) are accepted once;
+  // the key is the session identifier, never a constant for missing results
+  const sessionKey = envelope.sessionId ? `${day}:${envelope.sessionId}` : null;
   if (sessionKey && seenCommands.has(sessionKey)) return json(res, 200, { ok: true, duplicate: true });
 
   const verdict = validateReplay(envelope);
   if (!verdict.ok) return json(res, 422, { error: 'replay-mismatch', detail: verdict });
 
-  // plausibility: bounded duration and sane input rate
+  // plausibility: only finished runs (with a terminal reason) belong on a board
+  if (!verdict.reason) return json(res, 422, { error: 'not-terminal' });
   if (verdict.tick > 30 * 60 * 30) return json(res, 422, { error: 'implausible-duration' });
   if (envelope.commands.length > verdict.tick) return json(res, 422, { error: 'implausible-input-rate' });
 
   const board = dailyBoards.get(day) || [];
   board.push({
     score: verdict.score, ticks: verdict.tick,
-    invalid: 0, sessionId: envelope.sessionId || 'anon',
+    invalid: verdict.invalid, sessionId: envelope.sessionId || 'anon',
     ruleset: `v${CONTENT_VERSION}`, when: Date.now(),
   });
   board.sort(compareBoard);
@@ -138,7 +144,7 @@ async function serveStatic(req, res, path) {
     const ext = extname(filePath).toLowerCase();
     res.writeHead(200, {
       'Content-Type': MIME[ext] || 'application/octet-stream',
-      'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=31536000, immutable',
+      'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=3600',
     });
     res.end(data);
   } catch {

@@ -5,8 +5,12 @@
   "type": "module",
   "scripts": {
     "test": "node tests/rules.test.mjs",
+    "test:e2e": "node tests/e2e.mjs",
     "start": "node server.js"
   },
   "license": "UNLICENSED",
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "playwright-core": "^1.62.1"
+  }
 }

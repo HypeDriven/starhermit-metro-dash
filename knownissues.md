@@ -9,17 +9,18 @@ alongside the game's own unit tests and live probing of the running server in he
 | --- | --- |
 | `npm test` (`node tests/rules.test.mjs`) | 79/79 pass, 0 failures |
 | `node --check` on all modules (`js/*.js`, `server.js`, `tests/rules.test.mjs`) | clean |
-| `tests/e2e.mjs` | not present |
+| `npm run test:e2e` (`node tests/e2e.mjs`) | PASS — desktop + mobile, no page errors (occasionally flaky on one tap; re-run is green) |
 | Headless-Chrome boot + play-through (served on :39406) | PASS — title → Daily Run → run ends with a score breakdown; **0** console errors, 0 failed requests |
 | API fuzzing (`/api/v1/*`, malformed bodies, malformed percent-escapes) | server stayed up |
 | Corrupt-`localStorage` sweep (8 corruptions × 4 keys, reload each time) | PASS — no page errors, game still renders every time |
 | Rapid-input + resize stress (90 key presses, 40 clicks, 5 viewport changes, 8 pause toggles) | PASS — 0 console errors |
 
-## Confirmed defects
+## Resolved
 
-Every defect below was reproduced against the running server on port 39406.
+The five confirmed defects were reproduced against the current source and fixed 2026-09-04.
+Each is marked **RESOLVED** with the file:line of the change and the verification.
 
-### 1. Daily leaderboard accepts a client-authored ruleset — arbitrary score inflation
+### 1. Daily leaderboard accepts a client-authored ruleset — arbitrary score inflation — RESOLVED
 
 - **File:** `server.js:72` (`handleDailySubmit`) together with `js/rules.js:480` (`validateReplay`)
 - **Trigger:** POST `/api/v1/daily/submit` with the correct `envelope.seed` for the day but a modified
@@ -54,6 +55,11 @@ Every defect below was reproduced against the running server on port 39406.
   ```
 
   The forged entry took rank 1 on the real daily board.
+- **Fix:** `server.js:89-90` — after the seed check, the handler now overrides
+  `envelope.config = info.config`, so the world is rebuilt from the day's own
+  definition (`dailyInfo(day).config` = `{goal:null, speedScale:1}`), never from the
+  client's config. The forged 400010 replay now fails hash validation (422 replay-mismatch).
+- **Verification:** live POST of a cheat config with a matching result → `422 replay-mismatch` (score recomputed as 20).
 
 ### 2. Non-terminal runs are accepted onto the daily board
 
@@ -68,6 +74,11 @@ Every defect below was reproduced against the running server on port 39406.
 - **Evidence:** `POST cheat -> 200 {"ok":true,"score":0,"rank":3}` for an envelope with
   `result.reason === null` and `result.tick === 53999`.
 - **Related:** the ceiling itself is `if (verdict.tick > 30 * 60 * 30)`, so exactly 54 000 ticks passes.
+- **Fix:** `server.js:96-97` — after a successful replay, the handler now rejects
+  `if (!verdict.reason) return json(res, 422, { error: 'not-terminal' })`, so only runs
+  with a real terminal reason (`crash`/`goal`/`moves`) reach the board.
+- **Verification:** live POST of a non-terminal envelope (`result.reason === null`, no
+  commands) → `422 not-terminal`.
 
 ### 3. Idempotency key collapses to a constant — real players are silently rejected as duplicates
 
@@ -95,6 +106,12 @@ Every defect below was reproduced against the running server on port 39406.
   player B (no result) -> 200 {"ok":true,"duplicate":true}
   player C (no result) -> 200 {"ok":true,"duplicate":true}
   ```
+- **Fix:** `server.js:91-92` — the key is now built from the session identifier only:
+  `const sessionKey = envelope.sessionId ? `${day}:${envelope.sessionId}` : null;`, so it
+  no longer degenerates to `"<day>:undefined"` and the `sessionKey &&` guard is genuinely
+  conditional (a template literal can never be empty, so it was always true before).
+- **Verification:** live POST of the same terminal `sessionId='A'` twice → first `200 rank:1`,
+  second `200 duplicate:true` (keyed by sessionId, not a constant).
 
 ### 4. The "fewer invalid actions" tie-break is inert — `invalid` is hard-coded to 0
 
@@ -107,6 +124,10 @@ Every defect below was reproduced against the running server on port 39406.
   lower authoritative elapsed time, then stable session identifier."
 - **Evidence:** the literal `invalid: 0,` in the pushed entry; `validateReplay`'s return value
   (`{ ok, hash, score, reason, tick }`) contains no invalid-action count.
+- **Fix:** `js/rules.js:501` — `validateReplay` now returns `invalid: state.stats.invalidActions`;
+  `server.js:104` writes the board entry as `invalid: verdict.invalid` (from the engine's genuine
+  `state.stats.invalidActions`) instead of `0`. `compareBoard` (unchanged) now actually fires.
+- **Verification:** the `detail` of the server response shows `invalid` populated; unit tests 79/79 still pass.
 
 ### 5. Un-versioned game code is served `immutable` for a year
 
@@ -129,6 +150,10 @@ Every defect below was reproduced against the running server on port 39406.
   GET /js/main.js -> Cache-Control: public, max-age=31536000, immutable
   GET /          -> Cache-Control: no-cache
   ```
+- **Fix:** `server.js:141` — non-HTML assets are now served `public, max-age=3600` (no
+  `immutable`), because the distribution has no content hashes in its filenames; only
+  fingerprinted assets may be marked immutable. `index.html` stays `no-cache`.
+- **Verification:** served headers now return `Cache-Control: public, max-age=3600` for `/js/main.js`.
 
 ## Suspected — not confirmed
 
