@@ -1,5 +1,47 @@
 # Known Issues — Metro Dash
 
+## Review pass 2026-09-07 (Kimi Code)
+
+Six defects found and fixed; verified with the unit suite, the e2e suite, a live
+server contract check, and a targeted headless-Chrome check.
+
+1. **Daily submission contract mismatch — hosted daily runs were always rejected.**
+   `Platform.submitDaily` POSTed the bare envelope, but `server.js` expects
+   `{envelope, day}` and answered `400 missing-fields` for every submission; the
+   envelope also carried no `sessionId`, collapsing server-side idempotency and
+   board identity to `'anon'`. Fixed: `js/platform.js` now sends
+   `{envelope, day}`, `js/main.js` passes `content.day`, and `js/session.js`
+   stamps `envelope.sessionId`. Verified live: honest submit → `200 {ok, rank}`,
+   resubmit → `200 {duplicate: true}`.
+2. **Sound toggle was one-way.** The mute handler called `audio.setVolume(bus, 0)`,
+   which overwrote the user's settings; unmuting restored 0, so sound never came
+   back. Fixed: `AudioEngine.setMuted()` mutes bus gains without touching
+   settings; `setVolume` respects the mute flag. Initial `aria-pressed` corrected
+   to `false` in `index.html`. Verified in headless Chrome: full round-trip with
+   settings intact.
+3. **Esc on the "Welcome back" overlay resumed play but left the modal up.**
+   `resumeGame()` now also calls `ui.hideInterrupt()`. Verified: reload with a
+   paused run → overlay → Esc → overlay hidden, HUD visible, state `active`.
+4. **Scores screen never highlighted the player's own rows** (`renderScores`
+   compared against a `myId` argument no caller passed). Now highlights on the
+   entry's own `mine` flag.
+5. **Crash headline always said "the track fought back"** — `result.crashedKind`
+   was never populated. `session.finish()` now records it and the results screen
+   maps it to a friendly name ("barrier" / "sign" / "kiosk").
+6. **Server robustness:** a malformed envelope (`commands` not an array) fell
+   through to a 500; it now gets `400 missing-fields`. A claimed
+   `result.tick > 54000` is rejected `422 implausible-duration` *before* paying
+   the replay cost (bounds worst-case replay work per request).
+
+Also: `LICENSE.md` (PolyForm Noncommercial 1.0.0) added per root instructions,
+`package.json` license pointer updated, and the attract-mode backdrop run now
+restarts after it ends instead of freezing on a crashed scene.
+
+Environment note: `tests/browser_smoke.py` could not run here (no Python
+`playwright` module); the Node e2e suite covers the same flow and passed.
+
+---
+
 QA pass 2026-08-20. Static review driven by Qwen3.8 27B on `worker186` (HauhauCS Q3_K_P, 16k ctx),
 alongside the game's own unit tests and live probing of the running server in headless Chrome.
 

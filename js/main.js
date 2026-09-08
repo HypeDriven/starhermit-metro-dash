@@ -195,7 +195,7 @@ function handleRunEnd(result, envelope, state) {
 
   // daily: submit replay for validation when hosted
   if (content.kind === 'daily') {
-    platform.submitDaily(envelope).then((verdict) => {
+    platform.submitDaily(envelope, content.day).then((verdict) => {
       if (verdict && verdict.ok === false) ui.toast('Daily submission rejected: ' + (verdict.error || 'invalid'));
     });
   }
@@ -224,6 +224,7 @@ function pauseGame() {
 function resumeGame() {
   if (!session) return;
   ui.showPause(false);
+  ui.hideInterrupt();
   ui.hideScreens();
   ui.showHUD(true);
   session.resume();
@@ -391,8 +392,12 @@ function makeIdleState() {
 }
 function advanceIdle() {
   if (!idleState) return;
+  if (idleState.state.status !== 'active') {
+    makeIdleState(); // attract run crashed or finished — restart the drift
+    return;
+  }
   idleTick++;
-  if (idleState.state.status === 'active' && idleTick % 2 === 0) {
+  if (idleTick % 2 === 0) {
     idleState.update(performance.now());
   }
 }
@@ -479,12 +484,8 @@ function wire() {
   // audio toggle
   $('btn-audio-toggle').addEventListener('click', (e) => {
     audio.unlock();
-    const muted = settings.music + settings.effects + settings.ambience + settings.voice > 0;
-    if (muted) {
-      for (const bus of ['music', 'effects', 'ambience', 'voice']) audio.setVolume(bus, 0);
-    } else {
-      for (const bus of ['music', 'effects', 'ambience', 'voice']) audio.setVolume(bus, settings[bus]);
-    }
+    const muted = !audio.muted;
+    audio.setMuted(muted);
     e.currentTarget.setAttribute('aria-pressed', String(muted));
     e.currentTarget.textContent = muted ? '∅' : '♪';
   });

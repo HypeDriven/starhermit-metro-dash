@@ -246,9 +246,10 @@ export function createUI(handlers, stores) {
       result.reason === 'goal' ? 'Stage Complete' :
       result.reason === 'moves' ? 'Out of Moves' :
       result.reason === 'quit' ? 'Run Ended' : 'Run Over';
+    const crashNames = { barrier: 'barrier', sign: 'sign', block: 'kiosk' };
     $('results-headline').textContent =
       result.reason === 'goal' ? `Objective complete — ${fmtScore(result.score)} points`
-      : result.reason === 'crash' ? `Crushed it until the ${result.crashedKind || 'track'} fought back — ${fmtScore(result.score)} points`
+      : result.reason === 'crash' ? `Crushed it until the ${crashNames[result.crashedKind] || 'track'} fought back — ${fmtScore(result.score)} points`
       : `${fmtScore(result.score)} points`;
     const tbody = $('results-table').querySelector('tbody');
     tbody.textContent = '';
@@ -283,7 +284,7 @@ export function createUI(handlers, stores) {
   // --- scores ----------------------------------------------------------------------------
 
   let scoreFilter = 'all';
-  function renderScores(board, myId) {
+  function renderScores(board) {
     const tbody = $('scores-table').querySelector('tbody');
     tbody.textContent = '';
     let entries = board.entries.slice();
@@ -297,7 +298,7 @@ export function createUI(handlers, stores) {
         td.textContent = String(val);
         tr.appendChild(td);
       }
-      if (e.sessionId === myId) tr.style.color = 'var(--accent)';
+      if (e.mine) tr.style.color = 'var(--accent)';
       tbody.appendChild(tr);
     });
     if (!entries.length) {

@@ -62,13 +62,13 @@ export class Platform {
   }
 
   /** Submit a daily replay for authoritative validation. Returns verdict or null. */
-  async submitDaily(envelope) {
+  async submitDaily(envelope, day) {
     if (!this.hosted) return null;
     try {
       const res = await fetch('/api/v1/daily/submit', {
         method: 'POST',
         headers: { ...this._headers(), 'Content-Type': 'application/json' },
-        body: JSON.stringify(envelope),
+        body: JSON.stringify({ envelope, day }),
       });
       if (res.status === 429) return { ok: false, error: 'rate-limited' };
       return await res.json();

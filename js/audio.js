@@ -29,6 +29,7 @@ export class AudioEngine {
     this.ctx = null;
     this.buses = {};
     this.unlocked = false;
+    this.muted = false;
     this.rng = new Rng(1);
     this.musicOn = false;
     this.musicTimer = null;
@@ -69,7 +70,15 @@ export class AudioEngine {
 
   setVolume(bus, value) {
     this.settings[bus] = value;
-    if (this.buses[bus]) this.buses[bus].gain.value = value;
+    if (this.buses[bus] && !this.muted) this.buses[bus].gain.value = value;
+  }
+
+  /** Mute all buses without touching the user's volume settings. */
+  setMuted(muted) {
+    this.muted = muted;
+    for (const name of ['music', 'effects', 'ambience', 'voice']) {
+      if (this.buses[name]) this.buses[name].gain.value = muted ? 0 : (this.settings[name] ?? 0.5);
+    }
   }
 
   setSeed(seed) {

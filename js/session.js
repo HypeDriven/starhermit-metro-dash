@@ -166,6 +166,7 @@ export class RunSession {
       components: { ...this.state.score },
       stats: { ...this.state.stats },
       distance: Math.floor(this.state.distance),
+      crashedKind: this.state.crashedInto ? this.state.crashedInto.kind : null,
       hash: stateHash(this.state),
     };
     this.result = result;
@@ -175,6 +176,7 @@ export class RunSession {
       commands: this.commands,
       result: { tick: result.tick, hash: result.hash, score: result.score, reason: result.reason },
     });
+    this.envelope.sessionId = this.id;
     if (this.hooks.onEnd) this.hooks.onEnd(result, this.envelope, this.state);
   }
 }

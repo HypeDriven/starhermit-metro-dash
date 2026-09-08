@@ -79,13 +79,21 @@ async function handleDailySubmit(req, res) {
     return json(res, 400, { error: 'malformed-body' });
   }
   const { envelope, day } = body || {};
-  if (!envelope || typeof day !== 'string') return json(res, 400, { error: 'missing-fields' });
+  if (!envelope || typeof envelope !== 'object' || typeof day !== 'string' ||
+      !Array.isArray(envelope.commands) || !envelope.result) {
+    return json(res, 400, { error: 'missing-fields' });
+  }
   if (envelope.rulesVersion !== RULES_VERSION) return json(res, 409, { error: 'stale-version' });
   if (EXCLUDED_DAYS.has(day)) return json(res, 422, { error: 'day-excluded-from-ranking' });
 
   const info = dailyInfo(new Date(day + 'T00:00:00Z'));
   if (Number.isNaN(info.seed)) return json(res, 400, { error: 'bad-day' });
   if (envelope.seed !== info.seed) return json(res, 422, { error: 'seed-mismatch' });
+
+  // reject implausible durations before paying the replay cost
+  if (!Number.isInteger(envelope.result.tick) || envelope.result.tick < 1 || envelope.result.tick > 30 * 60 * 30) {
+    return json(res, 422, { error: 'implausible-duration' });
+  }
 
   // The authoritative config comes from the day's definition, not the client —
   // a forged envelope.config must not be able to inflate a score.

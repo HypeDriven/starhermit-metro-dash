@@ -154,7 +154,12 @@ async function playPass(vpName, contextOpts, { touch }) {
         : ['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowUp', 'ArrowLeft'];
       for (const k of inputs) {
         if ((await state()) !== 'active') break;
-        await press(k);
+        try { await press(k); }
+        catch (error) {
+          // A crash can replace the touch tray between the state check and tap.
+          if ((await state()) !== 'active') break;
+          throw error;
+        }
         await page.waitForTimeout(300);
       }
       await page.waitForTimeout(1500);
