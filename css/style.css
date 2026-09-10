@@ -397,3 +397,35 @@ body.reduced-motion #hud-progress-bar { transition: none; }
   font-family: var(--font);
 }
 .screen ul { text-align: left; max-width: 60ch; line-height: 1.7; }
+
+/* --- Key art ------------------------------------------------------------------
+   Title screen backdrop (assets/keyart-title.webp) sits under the same panel
+   scrim as every other screen, so menu contrast is unchanged if it fails to
+   load. High contrast mode drops it entirely. */
+#screen-title {
+  background-image:
+    linear-gradient(180deg, rgba(10, 12, 22, 0.78), rgba(10, 12, 22, 0.94)),
+    url('../assets/keyart-title.webp');
+  background-size: cover;
+  background-position: center 62%;
+  background-repeat: no-repeat;
+}
+body.high-contrast #screen-title {
+  background-image: linear-gradient(180deg, rgba(0, 0, 0, 0.96), rgba(0, 0, 0, 0.98));
+}
+
+/* Results token emblem — decorative, never displaces the score table */
+#results-emblem {
+  width: 84px;
+  height: 84px;
+  margin: 8px 0 2px;
+  border-radius: 50%;
+  /* the emblem renders on its own deep-indigo ground; screen blending drops
+     that ground into the panel and leaves only the gold token glowing */
+  mix-blend-mode: screen;
+  filter: drop-shadow(0 6px 18px rgba(255, 201, 77, 0.28));
+}
+body.reduced-motion #results-emblem { filter: none; }
+@media (max-height: 480px) and (orientation: landscape) {
+  #results-emblem { width: 52px; height: 52px; margin: 4px 0 0; }
+}

@@ -191,6 +191,8 @@ function handleRunEnd(result, envelope, state) {
     saveLeaderboard(leaderboard);
   }
 
+  if (isBest && bestScore !== null) audio.event('best');
+
   const newAchievements = checkAchievements(result, content);
 
   // daily: submit replay for validation when hosted
@@ -246,6 +248,7 @@ function rewindRun() {
   ui.showPause(false);
   gameState = 'active';
   session.resume();
+  audio.event('rewind');
   ui.toast('Rewound 5 seconds');
 }
 

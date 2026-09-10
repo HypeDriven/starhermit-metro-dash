@@ -16,3 +16,8 @@ Generated with MOSS-SoundEffect v2.0, 48 kHz mono Opus (96 kbps VBR, loudness-no
 | go-signal.opus | go | Higher sustained starter beep, clear race-start signal tone. |
 | ui-tap.opus | ui | Soft plastic button press, gentle short UI tap click. |
 | achievement.opus | achievement | Two-tone bright chime reward with a sparkling medal jingle, satisfying unlock sound. |
+| rewind.opus | rewind | Short reverse tape-rewind swoosh, backwards airy whoosh with a soft settling click at the end. |
+| personal-best.opus | best | Bright rising three-note chime flourish with a warm shimmer tail, celebratory personal record fanfare. |
+
+Canonical source of truth: `manifest.txt` (file | event id | description | usage context).
+`manifest.json` is the generator input consumed by the SFX toolchain.

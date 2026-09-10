@@ -21,6 +21,8 @@ const AUTHORED_SFX_BY_EVENT = Object.freeze({
   go: 'go-signal',
   ui: 'ui-tap',
   achievement: 'achievement',
+  rewind: 'rewind',
+  best: 'personal-best',
 });
 
 export class AudioEngine {
@@ -234,6 +236,15 @@ export class AudioEngine {
       case 'achievement':
         this._tone({ freq: 784, dur: 0.12, type: 'sine', gain: 0.14 });
         setTimeout(() => this._tone({ freq: 1175, dur: 0.2, type: 'sine', gain: 0.14 }), 110);
+        break;
+      case 'rewind':
+        this._tone({ freq: 900 * jitter, freq2: 220 * jitter, dur: 0.3, type: 'triangle', gain: 0.12 });
+        this._noise({ dur: 0.3, gain: 0.08, freq: 2200, q: 0.7 });
+        break;
+      case 'best':
+        for (let i = 0; i < 3; i++) {
+          setTimeout(() => this._tone({ freq: [659, 880, 1319][i], dur: 0.22, type: 'sine', gain: 0.15 }), i * 120);
+        }
         break;
     }
   }

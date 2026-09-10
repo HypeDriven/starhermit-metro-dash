@@ -1,0 +1,28 @@
+# Metro Dash — canonical SFX manifest
+# Format: file | event id | description of the sound | usage context
+# Event ids are the strings passed to AudioEngine.event(type) in js/audio.js
+# (AUTHORED_SFX_BY_EVENT). Rules events (js/rules.js step()) are forwarded
+# verbatim by handleEvents() in js/main.js; UI events are raised directly.
+# Every clip: 48 kHz mono Opus, 96 kbps VBR, loudness-normalised to -20 LUFS,
+# generated with MOSS-SoundEffect v2.0 at 100 inference steps.
+# Each event also has a WebAudio synth fallback that plays while the clip is
+# still decoding or if it fails to load, so the cue is never silent.
+
+lane-switch.opus   | lane        | Quick soft air whoosh of a runner darting sideways one lane, short light swish with a faint fabric flap. | Effects bus. Fires on an accepted left/right command; the most frequent cue in the mix, so it stays short and dry.
+jump.opus          | jump        | Light bouncy leap sound, rising airy swoop with a soft shoe push-off from pavement. | Effects bus. Fires when a jump is accepted and JUMP_TICKS starts; must read as "you are now airborne for 16 ticks".
+slide.opus         | slide       | Short gritty shoe slide scrape across asphalt, low friction scuff trailing off quickly. | Effects bus. Fires when a slide is accepted; length roughly matches the 18-tick slide window.
+token-pickup.opus  | coin        | Bright metallic token plucked from the air, small coin clink with a clean ringing shimmer. | Effects bus. One per collected token; can fire five times in a second on a coin line, so it is quiet and non-fatiguing.
+near-miss.opus     | dodge       | Fast airy pass-by whoosh of an obstacle rushing past very close, brief and sharp. | Effects bus. Fires as each obstacle's back edge clears the player and +10 dodge points are banked; the reward tick of the core loop.
+invalid-move.opus  | invalid     | Dull muted wooden clunk, short dampened knock signaling a rejected action. | Effects bus. Fires when a command is rejected (lane edge, airborne, sliding, restricted by mode). Paired with an aria-live "Can't do that" announcement.
+crash.opus         | crash       | Heavy body-impact thud into a metal barrier with clattering panel and tumbling debris. | Effects bus. The run-ending hit. Loudest clip in the game; ducks nothing else because music stops on the same frame.
+goal-reached.opus  | goal        | Four bright ascending mallet bell notes, cheerful celebratory finish-line flourish. | Effects bus. Fires when a lesson/journey/challenge objective completes (reason 'goal').
+countdown-beep.opus| countdown   | Single clean mid-pitched electronic countdown beep, short and precise. | Voice bus. Three beeps at 700 ms spacing before every run, in step with the 3-2-1 overlay.
+go-signal.opus     | go          | Higher sustained starter beep, clear race-start signal tone. | Voice bus. The "GO" frame; control unlocks on the same tick, so the cue is the go-ahead, not a flourish after it.
+ui-tap.opus        | ui          | Soft plastic button press, gentle short UI tap click. | Effects bus. Menu and pause interactions.
+achievement.opus   | achievement | Two-tone bright chime reward with a sparkling medal jingle, satisfying unlock sound. | Effects bus. Fires once per newly unlocked achievement on the results screen, alongside its toast.
+rewind.opus        | rewind      | Short reverse tape-rewind swoosh, backwards airy whoosh with a soft settling click at the end. | Effects bus. Practice-mode "Rewind 5s" from the pause panel; the backwards direction sells that the simulation moved back to an earlier checkpoint.
+personal-best.opus | best        | Bright rising three-note chime flourish with a warm shimmer tail, celebratory personal record fanfare. | Effects bus. Fires on the results screen only when the run beats an existing personal best on that board (never on a first entry).
+
+# Ambience and music are procedural (js/audio.js): a filtered noise bed on the
+# ambience bus and a two-stem adaptive loop on the music bus whose density
+# follows run speed. No streamed audio files ship.

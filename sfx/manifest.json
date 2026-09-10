@@ -70,5 +70,17 @@
     "seconds": 2,
     "prompt": "Two-tone bright chime reward with a sparkling medal jingle, satisfying unlock sound.",
     "event": "achievement"
+  },
+  {
+    "name": "rewind",
+    "seconds": 1,
+    "prompt": "Short reverse tape-rewind swoosh, backwards airy whoosh with a soft settling click at the end.",
+    "event": "rewind"
+  },
+  {
+    "name": "personal-best",
+    "seconds": 2,
+    "prompt": "Bright rising three-note chime flourish with a warm shimmer tail, celebratory personal record fanfare.",
+    "event": "best"
   }
 ]
