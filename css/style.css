@@ -76,13 +76,14 @@ body.high-contrast {
 }
 #brand { font-weight: 800; letter-spacing: 0.18em; color: var(--accent); font-size: 0.85rem; }
 .chip {
-  margin-left: auto;
   background: #ffffff12;
   border-radius: 999px;
   padding: 3px 12px;
   font-size: 0.8rem;
   color: var(--muted);
 }
+#profile-chip { margin-left: auto; }
+#sync-chip { margin-left: 4px; }
 #clock-chip { margin-left: 0; }
 
 #main { position: relative; flex: 1; min-height: 0; }

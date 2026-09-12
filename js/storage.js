@@ -1,5 +1,7 @@
 // Local persistence: versioned, checksummed JSON documents in localStorage.
-// Guest-first: everything works offline; cloud sync is a host concern.
+// Guest-first: everything works offline; when hosted, the platform adapter
+// mirrors these docs to the StarHermit cloud-save slot (local stays canonical
+// for offline play).
 
 const PREFIX = 'metro-dash:';
 const DOC_VERSION = 1;
@@ -52,9 +54,18 @@ export function loadDoc(key, defaults) {
   }
 }
 
+const saveListeners = new Set();
+/** Subscribe to every persisted doc write (key, data). Used by the cloud mirror. */
+export function onDocSaved(fn) {
+  saveListeners.add(fn);
+}
+
 export function saveDoc(key, data) {
   const payload = JSON.stringify(data);
   writeRaw(key, JSON.stringify({ v: DOC_VERSION, checksum: checksum(payload), payload }));
+  for (const fn of saveListeners) {
+    try { fn(key, data); } catch { /* listener errors must not break saves */ }
+  }
 }
 
 // ---------------------------------------------------------------------------

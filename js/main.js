@@ -9,7 +9,7 @@ import { RunSession } from './session.js';
 import {
   loadSettings, saveSettings, loadProgression, saveProgression,
   loadAchievements, saveAchievements, loadLeaderboard, saveLeaderboard,
-  unlockAchievement, addLeaderboardEntry,
+  unlockAchievement, addLeaderboardEntry, onDocSaved,
 } from './storage.js';
 import { createUI, DEFAULT_BINDINGS } from './ui.js';
 import { createRenderer } from './render.js';
@@ -22,6 +22,49 @@ const achievements = loadAchievements();
 const leaderboard = loadLeaderboard();
 const platform = new Platform();
 platform.consent = !!settings.consent;
+
+// --- cloud mirror (hosted only; localStorage stays the offline cache) ------------
+
+function cloudDoc() {
+  return {
+    v: 1,
+    settings: structuredClone(settings),
+    progression: structuredClone(progression),
+    achievements: structuredClone(achievements),
+    leaderboard: structuredClone(leaderboard),
+  };
+}
+platform.getCloudDoc = cloudDoc;
+
+let applyingRemoteDoc = false;
+onDocSaved(() => { if (!applyingRemoteDoc) platform.scheduleCloudSave(); });
+
+/** Remote-preferred load: overwrite the local docs with the cloud mirror. */
+function applyCloudDoc(doc) {
+  if (!doc || typeof doc !== 'object') return false;
+  const stores = [
+    [settings, doc.settings], [progression, doc.progression],
+    [achievements, doc.achievements], [leaderboard, doc.leaderboard],
+  ];
+  let applied = false;
+  for (const [store, remote] of stores) {
+    if (!remote || typeof remote !== 'object') continue;
+    for (const k of Object.keys(store)) delete store[k];
+    Object.assign(store, structuredClone(remote));
+    applied = true;
+  }
+  if (!applied) return false;
+  applyingRemoteDoc = true;
+  try {
+    saveSettings(settings);
+    saveProgression(progression);
+    saveAchievements(achievements);
+    saveLeaderboard(leaderboard);
+  } finally {
+    applyingRemoteDoc = false;
+  }
+  return true;
+}
 
 const audio = new AudioEngine(settings);
 const $ = (id) => document.getElementById(id);
@@ -41,6 +84,24 @@ let autoPaused = false;
 
 function track(event, props) {
   platform.track(event, props);
+}
+
+function applySettingsEffects() {
+  platform.consent = !!settings.consent;
+  ui.applyA11yClasses();
+  renderer && renderer.applyQuality && renderer.applyQuality();
+  renderer && renderer.applyPalette && renderer.applyPalette();
+  for (const bus of ['music', 'effects', 'ambience', 'voice']) audio.setVolume(bus, settings[bus]);
+}
+
+// --- sync status chip (hosted only) -------------------------------------------------
+
+function renderSyncChip() {
+  const chip = $('sync-chip');
+  if (!platform.hosted) { chip.hidden = true; return; }
+  chip.hidden = false;
+  chip.textContent = { saving: 'Syncing…', synced: 'Cloud synced', offline: 'Cloud offline' }[platform.syncState] || platform.syncState;
+  chip.title = 'Cloud save status';
 }
 
 // --- achievements ---------------------------------------------------------------
@@ -182,7 +243,7 @@ function handleRunEnd(result, envelope, state) {
     bestScore = scopeEntries.length ? Math.max(...scopeEntries.map((e) => e.score)) : null;
     isBest = bestScore === null || result.score > bestScore;
     addLeaderboardEntry(leaderboard, {
-      name: 'You', mine: true,
+      name: platform.nickname || 'You', mine: true,
       score: result.score, distance: result.distance, ticks: result.tick,
       invalid: result.stats.invalidActions, mode: content.kind, day: dailyDay,
       seed: content.seed, ruleset: 'v1', assists: settings.hints ? 'hints' : 'none',
@@ -415,11 +476,7 @@ function wire() {
     onSelectContent: selectContent,
     onSettingsChanged: () => {
       saveSettings(settings);
-      platform.consent = !!settings.consent;
-      ui.applyA11yClasses();
-      renderer && renderer.applyQuality && renderer.applyQuality();
-      renderer && renderer.applyPalette && renderer.applyPalette();
-      for (const bus of ['music', 'effects', 'ambience', 'voice']) audio.setVolume(bus, settings[bus]);
+      applySettingsEffects();
     },
   }, { settings });
 
@@ -527,6 +584,7 @@ function wire() {
   // lifecycle: backgrounding pauses solo simulation
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
+      platform.flushCloudSave();
       if (gameState === 'active') {
         autoPaused = true;
         pauseGame();
@@ -549,7 +607,15 @@ function wire() {
 // --- boot ------------------------------------------------------------------------------------
 
 async function boot() {
-  await platform.init();
+  const remoteDoc = await platform.init();
+
+  // identity + sync status (hosted only; offline stays "Guest" with no chip)
+  if (platform.nickname) $('profile-chip').textContent = platform.nickname;
+  platform.onSyncChange(renderSyncChip);
+  renderSyncChip();
+
+  // cloud mirror flush when leaving the page
+  window.addEventListener('pagehide', () => platform.flushCloudSave());
 
   // clock chip: server-synced UTC
   const tickClock = () => {
@@ -568,6 +634,13 @@ async function boot() {
   ui.refreshTitle(progression);
   ui.showScreen('title');
   ui.buildHelp();
+
+  // remote-preferred cloud load landed during init: adopt it before records render
+  if (applyCloudDoc(remoteDoc)) {
+    applySettingsEffects();
+    ui.refreshTitle(progression);
+    ui.buildHelp();
+  }
 
   // offer resume of an interrupted run ("while you were away")
   for (const content of resumeCandidates()) {

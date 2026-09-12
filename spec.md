@@ -36,7 +36,8 @@ jump, or slide — one tick at a time.
 | `js/audio.js` | WebAudio engine: four buses, authored Opus one-shots with synth fallbacks, ambience bed, adaptive music. |
 | `js/ui.js` | Screen router, HUD, results, scores, help, settings, key rebinding, live-region announcements. |
 | `js/storage.js` | Versioned checksummed documents, typed stores, leaderboard insert and tie-break comparator. |
-| `js/platform.js` | StarHermit adapter: launch token, time sync, presence, activity, daily submit, consent-gated telemetry. |
+| `js/platform.js` | StarHermit adapter: fragment launch token + refresh, profile nickname, cloud-save mirror, daily submit to its own backend. |
+| `js/zip.js` | Minimal stored-entry ZIP writer/reader for the cloud-save slot (CRC32, no compression). |
 | `js/rng.js` | `fnv1a` and a mulberry32 `Rng` with `int`/`pick`/`chance`/`fork`/`clone`. |
 | `server.js` | StarHermit authoritative script: static serving + `/api/v1/*`, replay-validated daily board. |
 | `tests/rules.test.mjs` | `npm test` — rules, determinism, replay, serialization, content validation. |
@@ -79,10 +80,10 @@ phase 0.6–0.9. *Rules out:* random skyboxes, weather that hides obstacles, eff
 Reduced Motion.
 
 **5. Guest-first, offline-complete, host-better.**
-Nothing requires a login. With a StarHermit launch token the game adds server time, presence,
-activity pairing and an authoritative daily board. *Rules in:* every network call wrapped and
-failure-tolerant. *Rules out:* gating content on connectivity, blocking a run on a fetch,
-persisting the launch token.
+Nothing requires a login. With a StarHermit launch token the game adds server time, an account
+nickname in the topbar, cloud-synced progress and an authoritative daily board. *Rules in:* every
+network call wrapped and failure-tolerant. *Rules out:* gating content on connectivity, blocking a
+run on a fetch, persisting the launch token.
 
 ---
 
@@ -455,20 +456,32 @@ longer than English fit without clipping at 390 px.
 Conventions per <https://wiki.starhermit.com/>.
 
 **Used.**
-- *Launch handshake* — `?launch=<token>` is read into memory only (never persisted) and sent as
-  `Authorization: Bearer`; presence of the token (or `?hosted=1`) switches the game to hosted mode.
+- *Launch handshake* — `#game_token=<jwt>` is read once from the URL fragment, stripped via
+  `history.replaceState`, and sent as `Authorization: Bearer` on every call (query-param fallbacks
+  are local-dev only; hosted mode activates iff a token was read). The JWT payload's `sub` and
+  `game_scope` are decoded (never persisted); the token is re-minted every 45 min via
+  `POST /api/v1/games/{slug}/launch-token` (60 s retry on failure).
+- *Identity* — `GET /api/v1/users/{sub}/profile` → nickname in the topbar profile chip
+  ("Player "+id8 fallback); never `/api/v1/me`, never usernames.
+- *Cloud save* — one slot at `GET`/`PUT /api/v1/me/cloud-saves/{slug}` (zip+base64 via `js/zip.js`).
+  Remote wins on conflict at boot; saves debounce 2 s and flush on `pagehide`/hidden; a small
+  sync chip shows saving/synced/offline. localStorage stays the offline cache and mirror source.
 - *Time* — `GET /api/v1/time`, round-trip adjusted; the topbar clock chip and the daily-day derivation use
   the corrected clock so the daily rolls over on server time.
-- *Presence* — `POST /api/v1/presence` on run start, then every 30 s until the run ends.
-- *Sessions/activity* — `POST /api/v1/activity/start` at boot, `/end` on `beforeunload`.
-- *Leaderboard* — `POST /api/v1/daily/submit` with `{envelope, day}`; the server re-derives the day's seed
+- *Daily board* — `POST /api/v1/daily/submit` with `{envelope, day}` against this game's own
+  `server.js` backend; the server re-derives the day's seed
   **and config**, replays the command log with the same `js/rules.js`, rejects `stale-version`,
   `seed-mismatch`, `implausible-duration` (> 54 000 ticks), `replay-mismatch`, `not-terminal` and
   `implausible-input-rate` (more commands than ticks), de-duplicates by `day:sessionId`, and returns a rank.
-- *Telemetry* — `POST /api/v1/telemetry`, consent-gated (Settings → Data), anonymous `{event, props, ts}` only.
+  When the backend is unreachable the local board stands.
 
-**Not used.** No identity or profile API (the profile chip is a static "Guest"), no platform achievement or
-cloud-save API (achievements and progression are local), no matchmaking, party, chat or realtime multiplayer —
+**Local dev only.** `POST /api/v1/presence`, `/api/v1/activity/*` and consent-gated
+`POST /api/v1/telemetry` target the repo's own `server.js` and fire only on localhost; the platform
+has no such per-game routes, so hosted mode never calls them (no on-platform console errors).
+
+**Not used.** No platform achievement API (achievements are local, cloud-mirrored), no platform
+leaderboard submission (boards are local; only the daily replay is validated by the game's own
+backend), no matchmaking, party, chat or realtime multiplayer —
 the game is single-player with asynchronous daily competition.
 
 **Offline.** Without a launch token every one of those calls is skipped client-side, and all failures are
@@ -577,7 +590,8 @@ low tier stays cheap and the silhouettes stay unambiguous (pillar 3).
 4. **The "Show hints" setting has no behaviour**: it is persisted and tagged onto leaderboard entries as
    `assists`, but no hint is ever shown.
 5. **`holdToSlide` exists in `DEFAULT_SETTINGS` with no UI and no effect.**
-6. **The profile chip is a static "Guest"** — there is no identity integration (§12).
+6. **The profile chip shows "Guest" offline** — identity integration (nickname + cloud sync) exists only
+   when a launch token is present (§12).
 7. **The 2D fallback renderer is functional, not pretty**: flat rectangles, no day cycle, no particles, no
    camera work. It exists so a WebGL-less device can still play.
 8. **`tests/browser_smoke.py` cannot run in the current environment** (no Python `playwright` module); the Node
@@ -597,5 +611,4 @@ low tier stays cheap and the silhouettes stay unambiguous (pillar 3).
   ("Overhead sign — swipe down to slide") shown once per mechanic per profile, suppressed once the matching
   lesson is complete.
 - **`holdToSlide`**: hold the slide input to re-arm the slide as soon as the 18-tick window ends.
-- **Identity in the profile chip** when a launch token resolves to a StarHermit account, replacing "Guest".
 - **A durable daily board** behind the same submit contract, so ranks survive a restart.
