@@ -307,12 +307,27 @@ tfoot th, tfoot td { border-top: 2px solid var(--accent); font-weight: 800; colo
   inset: 0;
   z-index: 20;
   display: flex;
-  align-items: center;
+  align-items: safe center;
   justify-content: center;
   background: rgba(6, 8, 14, 0.7);
   backdrop-filter: blur(3px);
+  overflow-y: auto;
+  padding: 8px;
+  box-sizing: border-box;
 }
 .overlay[hidden] { display: none; }
+/* panels never exceed the viewport: they scroll inside so the last control
+   (End Run, Done) is always fully reachable */
+.overlay > .panel { max-height: calc(100% - 16px); overflow-y: auto; flex-shrink: 0; box-sizing: border-box; }
+@media (max-height: 500px) {
+  .overlay > .panel { padding: 10px 16px; gap: 6px; }
+  .overlay > .panel h2 { margin: 0 0 4px; font-size: 1.2rem; }
+  /* six pause actions fit a 361px-tall viewport in two columns */
+  #overlay-pause .panel { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 8px; width: min(92vw, 520px); }
+  #overlay-pause .panel h2 { grid-column: 1 / 3; }
+  #overlay-pause .panel .btn { min-height: 44px; padding: 6px 10px; margin: 0; }
+  #overlay-pause .panel .btn[hidden] { display: none; }
+}
 .panel {
   background: var(--panel-solid);
   border: 1px solid #ffffff2a;

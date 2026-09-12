@@ -487,7 +487,10 @@ export function createThreeRenderer(container, opts) {
       if (anyAlive) pGeo.attributes.position.needsUpdate = true;
 
       // camera: spring-follow + tiered shake (reduced motion: static)
-      [camX, camVX] = spring(camX, camVX, playerX * CAMERA.laneFollow, CAMERA.springK * 0.6, dt);
+      // Narrow (portrait) views follow the lane more closely so the outer
+      // lane's board and courier stay inside the frame at collision depth.
+      const follow = container.clientWidth < container.clientHeight ? 0.78 : CAMERA.laneFollow;
+      [camX, camVX] = spring(camX, camVX, playerX * follow, CAMERA.springK * 0.6, dt);
       let sx = 0, sy = 0;
       if (shake > 0.001 && !settings.reducedMotion) {
         sx = (Math.random() - 0.5) * shake;
