@@ -445,3 +445,30 @@ body.reduced-motion #results-emblem { filter: none; }
 @media (max-height: 480px) and (orientation: landscape) {
   #results-emblem { width: 52px; height: 52px; margin: 4px 0 0; }
 }
+
+/* --- Graphics settings (js/gfx-panel.js) ------------------------------------ */
+#settings-form #gfx-section select { max-width: 58%; }
+#settings-form .gfx-scale-row span { white-space: nowrap; }
+#settings-form .gfx-scale-row input[type="range"] { width: min(180px, 46%); }
+#gfx-scale-value { font-variant-numeric: tabular-nums; color: var(--accent); }
+.gfx-summary { margin: 2px 0 0; font-size: 0.85rem; line-height: 1.4; overflow-wrap: anywhere; }
+#gfx-section .warning { margin: 0; }
+
+/* frame-rate readout: bottom-left, never intercepts input or covers HUD controls */
+#fps-meter {
+  position: fixed;
+  left: calc(8px + var(--sal));
+  bottom: calc(8px + var(--sab));
+  z-index: 30;
+  pointer-events: none;
+  font: 600 0.75rem/1 var(--font);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  background: rgba(10, 12, 22, 0.7);
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+#fps-meter[hidden] { display: none; }
+@media (max-width: 700px) and (orientation: portrait) {
+  #fps-meter { bottom: auto; top: calc(144px + var(--sat)); }
+}

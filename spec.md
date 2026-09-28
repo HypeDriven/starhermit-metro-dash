@@ -18,7 +18,7 @@ jump, or slide — one tick at a time.
 | Players | 1 (asynchronous competition via a shared daily seed) |
 | Session length | 1–5 minutes per run; a journey stage is ~40–90 s |
 | Platforms | Browser, desktop + mobile (portrait and landscape), gamepad-aware |
-| Rendering | Three.js (`vendor/three.module.js`) with a full canvas-2D fallback renderer |
+| Rendering | Three.js r160 (`vendor/three.module.js` + same-release addons in `vendor/three/addons/`, via an importmap) with a full canvas-2D fallback renderer |
 | Simulation | Deterministic 30 tps fixed-step engine, no DOM and no wall-clock inside the rules |
 | Persistence | `localStorage`, versioned and checksummed, with an in-memory fallback |
 
@@ -32,7 +32,12 @@ jump, or slide — one tick at a time.
 | `js/rules.js` | Pure rules engine: state, legal actions, `step`, generation, scoring, serialize/hash, replay validation. |
 | `js/content.js` | Themes, 5 lessons, 40 journey stages, 6 challenges, daily derivation, achievements, reference bot, content validator. |
 | `js/session.js` | One run: fixed-step accumulator, command queue, replay log, periodic hashes, pause/snapshot/restore. |
-| `js/render.js` | Three.js scene (city, lamps, obstacle pools, particles, day cycle, spring camera) + 2D fallback with the same interface. |
+| `js/render.js` | Three.js scene (sky dome, city, lamps, obstacle pools, particles, day cycle, fitted sun shadows, spring camera), graphics settings, adaptive resolution + 2D fallback with the same interface. |
+| `js/gfx.js` | Pure graphics quality model: presets, categories, GPU detection, `resolve()`, `presetTier()`, `describe()`. |
+| `js/fx.js` | Lazily loaded post chain (RenderPass → GTAO → UnrealBloom → OutputPass → grade → SMAA/FXAA) and RoomEnvironment IBL. |
+| `js/gfx-panel.js` | Settings → Graphics section: builds the controls, persists `settings.graphics`, live cost summary. |
+| `js/gfx-strings.js` | Graphics section strings in the nine locales, picked from `navigator.languages`. |
+| `vendor/three/addons/` | three.js r160 (0.160.1) postprocessing passes, shaders and RoomEnvironment, unmodified. |
 | `js/audio.js` | WebAudio engine: four buses, authored Opus one-shots with synth fallbacks, ambience bed, adaptive music. |
 | `js/ui.js` | Screen router, HUD, results, scores, help, settings, key rebinding, live-region announcements. |
 | `js/storage.js` | Versioned checksummed documents, typed stores, leaderboard insert and tie-break comparator. |
@@ -41,6 +46,7 @@ jump, or slide — one tick at a time.
 | `js/rng.js` | `fnv1a` and a mulberry32 `Rng` with `int`/`pick`/`chance`/`fork`/`clone`. |
 | `server.js` | StarHermit authoritative script: static serving + `/api/v1/*`, replay-validated daily board. |
 | `tests/rules.test.mjs` | `npm test` — rules, determinism, replay, serialization, content validation. |
+| `tests/gfx.test.mjs` | `npm test` (`node --test`) — GPU detection, preset/override/scale resolution, preset clears overrides, locale coverage. |
 | `tests/e2e.mjs` | `npm run test:e2e` — real-UI playthrough in headless Chrome, desktop + mobile. |
 | `tests/daily-contract.mjs` | Client↔server daily-submit contract check against a live server. |
 | `tests/browser_smoke.py` | Optional Python/Playwright smoke pass (needs the `playwright` module). |
@@ -310,7 +316,9 @@ any run), Graduate (all five lessons), Mid-Line (journey 20), End of the Line (j
 **Screens** (`ui.js SCREENS`, exactly one visible): `title`, `journey`, `learn`, `challenge`, `practice`,
 `setup`, `results`, `scores`, `help`, `settings`. **Overlays**: pause (modal), countdown, interrupt
 ("Welcome back"). Every screen change focuses its first interactive element; `[data-back]` returns to the
-title, or restores the pause panel if the run is paused.
+title, or restores the pause panel if the run is paused. The `settings` screen (reachable from the title and
+the pause panel) groups its controls into Audio, Display (reduced motion, high contrast, colour palette),
+Graphics (§8), Accessibility & Controls, and Data fieldsets.
 
 **Layout.**
 - *Desktop*: full-bleed canvas; HUD objective + progress rail top-left, stat block top-right, pause button
@@ -362,8 +370,55 @@ derived from simulation distance, not frame count, so a stutter never desynchron
 track ahead of it. The city, fog and day cycle are all backdrop and must never out-contrast an obstacle.
 
 **Reduced motion** (`settings.reducedMotion`, also honoured via `prefers-reduced-motion`): camera shake off,
-FOV kick off, shadows off, particle bursts capped at 4, HUD progress transition and toast animation off,
+FOV kick off, shadows off, particle bursts capped at 4, courier idle bob, token spin, ambient motes, barrier
+light pulse and beacon blinking off, HUD progress transition and toast animation off,
 crash haptics suppressed.
+
+**Graphics.** The renderer uses ACES filmic tone mapping with sRGB output. A shader sky dome draws the
+day-cycle gradient with a sun glow and disc and, deep into the night, a sparse star field; its horizon equals
+the fog colour so the city fades into it. The key light is the day-cycle sun with a hemisphere fill; its PCF
+soft shadow camera is refitted every frame to the three lanes and curbs from just behind the camera to 110
+units ahead, and only gameplay objects (courier, obstacles) cast. With reflections on, a prefiltered
+`RoomEnvironment` is the scene environment, its strength scaled with daylight so nights stay dark. Materials
+are PBR: the courier's body and visor and the barrier bar are clearcoated, tokens are fully metallic, posts
+are brushed metal, facades are instance-tinted from five muted hues with a two-tone emissive window texture.
+Emissive accents are bright enough to bloom: lamp heads (hotter at night), the courier board's neon edge
+strip and the hover glow under it, pulsing amber lights on barrier posts, sign faces with white downward
+chevrons ("go under"), kiosk advert screens and, on detailed cities, blinking red beacons on tall towers.
+Detailed cities also get speckled asphalt with tyre-worn lanes, yellow edge lines and damp patches in a
+roughness map, raised concrete curbs and warm light pools under lamps. With particles on high, warm motes
+drift past with the run; burst sparks are round. Post-processing adds GTAO contact shading, bloom limited to
+highlights (threshold 0.92), a colour grade (gentle S-curve, slight saturation, cool shadows / warm
+highlights, bluer at night, lifted blacks) with a vignette, and FXAA/SMAA/MSAA. None of it changes an
+obstacle's silhouette or colour, and HUD/UI contrast is untouched.
+
+The Settings screen's **Graphics** section (built by `js/gfx-panel.js`, strings in all nine locales) offers:
+**Quality** (`#set-quality`: Auto (detected: …), Low, Balanced, High, Ultra — Auto is chosen from the WebGL
+unmasked renderer string: software renderers get Low, discrete GPUs and Apple M-series High, everything else
+Balanced, and touch/mobile devices are capped at Balanced); **Render scale** 50–200 % (`#gfx-scale`,
+multiplies the preset's scale); one select per effect (`#gfx-<category>`, default "From preset (…)") for
+shadows off/low/medium/high (1024²/2048²/4096²), ambient occlusion off/on/high, bloom, colour grade,
+anti-aliasing off/FXAA/SMAA/MSAA, reflections, particles low/high (burst cap 400/4 000 plus ambient motes)
+and city detail plain/detailed (10/24 buildings per side plus the detailed extras above); **Adaptive
+resolution** (default on: every ~90 frames, an average over 26 ms steps the resolution down by 0.1 to a
+floor of 0.6, under 14 ms steps it back up by 0.05); **Show frame rate** (a bottom-left readout, below the
+objective rail in portrait, never interactive); and a summary line "GPU · preset · cost · W×H px". Choosing a
+preset clears the overrides. Changes apply immediately (shadow maps, materials, city density, post chain,
+pixel ratio) and persist in `settings.graphics` inside the `metro-dash:settings` document; an older saved
+`quality` value maps low→Low, medium→Balanced, high→High. Presets:
+
+| | Low | Balanced | High | Ultra |
+|---|---|---|---|---|
+| Scale × pixel-ratio cap | 0.85 × 1 | 1 × 1.5 | 1 × 2 | 1.25 × 2 |
+| Shadows | off | 1024² | 2048² | 4096² |
+| Ambient occlusion | off | off | on | high |
+| Bloom / grade | off | on | on | on |
+| Anti-aliasing | MSAA (canvas) | FXAA | SMAA | MSAA |
+| Reflections / particles / detail | off / low / plain | on / high / detailed | on / high / detailed | on / high / detailed |
+
+Low renders straight to the canvas with no composer and never loads `js/fx.js`, so it costs what the old low
+tier did. If the post chain cannot be built the game renders without it and the Graphics section says so.
+The canvas and `<body>` carry `data-gfx-preset` with the resolved preset.
 
 **Visual assets the design calls for:** a title-screen key art backdrop that shows the three lanes and all
 three obstacle kinds at dawn; a results-screen token emblem tying the score screen to the collectible; a
@@ -417,7 +472,8 @@ Today the shipped game is **en-US only**: user-facing strings are inline literal
 help, settings, overlays) and in `js/ui.js` / `js/content.js` (HUD, results headlines, briefings, lesson
 and challenge copy, achievement labels), and numbers are formatted with a hard-coded
 `toLocaleString('en-US')` in `ui.js fmtScore`. `<html lang="en">` is static; there is no locale bundle,
-no string catalogue and no language selector. Adding the remaining eight locales is tracked in
+no string catalogue and no language selector. The one exception is the Settings → Graphics section, whose
+strings ship in all nine locales (`js/gfx-strings.js`, chosen from `navigator.languages`). Adding the remaining eight locales is tracked in
 **Design intent not yet implemented** (§17) — the intended shape is a `data/locales/<tag>.json` catalogue
 keyed by stable string ids, chosen from `navigator.languages` with a manual override in Settings, falling
 back en-GB→en-US, es-ES→es-419, fr-CA→fr-FR.
@@ -512,9 +568,9 @@ unavailable an in-memory Map takes over): `settings`, `progression`, `achievemen
 boot the game scans daily/journey/lesson keys and offers "Welcome back" with the exact restored state or
 abandon.
 
-**Rendering budgets.** Quality tiers `low / medium / high` set pixel ratio (1 / 1.5 / 2), shadows (off/on/on),
-building count (10 / 16 / 24), particle cap (400 / 1 500 / 4 000) and render scale (0.85 / 1 / 1). `auto`
-picks `low` when `deviceMemory ≤ 3` or on a coarse pointer with a short screen edge < 500 px. Obstacles use
+**Rendering budgets.** Graphics presets (§8 Graphics) set the pixel-ratio cap (1 / 1.5 / 2 / 2), render
+scale, shadow-map size, post chain, building count (10 or 24 per side) and particle cap (400 or 4 000); the
+pixel ratio is `min(devicePixelRatio, cap) × preset scale × render scale × adaptive scale`. Obstacles use
 fixed pools (22 per kind), tokens a pool of 48, buildings and lamps are instanced and recycled modulo a
 520-unit span; nothing is allocated per frame in the hot path. If WebGL is missing, `createRenderer` falls back
 to the 2D pseudo-perspective renderer with the same interface and the title shows a compatibility notice.
@@ -535,10 +591,12 @@ reachable and no stage soft-locks, plus an endless daily sanity run.
 
 **`npm run test:e2e` → `tests/e2e.mjs`** starts a static server on an ephemeral port and drives headless Chrome
 twice — desktop 1280×800 with the keyboard, then mobile 390×844 with touch — through: title → help (≥5 cards) →
-journey grid (exactly 40 stages, exactly 1 unlocked) → settings toggle → daily briefing (must state ranked
+journey grid (exactly 40 stages, exactly 1 unlocked) → settings toggle → Settings → Graphics (Auto label reads
+"detected: Low", Low then High applied to the canvas's `data-gfx-preset`, a bloom override reflected in the
+summary, both surviving a reload, Auto clearing the override) → daily briefing (must state ranked
 status) → countdown → active play with six real inputs → distance actually accumulating → pause/resume →
 run to crash → results breakdown (≥3 rows) → retry → pause → end run → results → menu. Any `pageerror` or
-non-benign console error fails the run; screenshots are written per stage.
+non-benign console error or warning fails the run; screenshots are written per stage.
 
 **`node tests/daily-contract.mjs`** boots the real `server.js` and checks the submit contract end to end:
 honest run accepted with a rank, resubmission answered `duplicate`, forged config rejected.

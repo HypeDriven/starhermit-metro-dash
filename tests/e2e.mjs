@@ -76,7 +76,7 @@ async function playPass(vpName, contextOpts, { touch }) {
   const errors = [];
   page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
   page.on('console', (m) => {
-    if (m.type() === 'error' && !browserNoise.test(m.text())) errors.push(`console: ${m.text()}`);
+    if ((m.type() === 'error' || m.type() === 'warning') && !browserNoise.test(m.text())) errors.push(`console ${m.type()}: ${m.text()}`);
   });
 
   const state = () => page.evaluate(() => window.__md?.state);
@@ -119,6 +119,37 @@ async function playPass(vpName, contextOpts, { touch }) {
       await page.check('#set-reduced-motion');
       await page.uncheck('#set-reduced-motion');
       await page.screenshot({ path: SHOT('settings', vpName) });
+      await page.click('#screen-settings [data-back]');
+      await page.waitForSelector('#screen-title:not([hidden])');
+    });
+
+    await step(`${vpName}: Graphics presets + override apply live and survive reload`, async () => {
+      const canvasPreset = () => page.evaluate(() => document.querySelector('#canvas-host canvas')?.dataset.gfxPreset);
+      await page.click('#btn-settings');
+      await page.waitForSelector('#screen-settings:not([hidden])');
+      await page.locator('#gfx-section').scrollIntoViewIfNeeded();
+      const autoLabel = await page.locator('#set-quality option[value="auto"]').innerText();
+      if (!/Auto \(detected: Low\)/.test(autoLabel)) throw new Error(`auto label: ${autoLabel}`);
+      await page.selectOption('#set-quality', 'low');
+      await page.waitForFunction(() => document.querySelector('#canvas-host canvas')?.dataset.gfxPreset === 'low');
+      await page.selectOption('#set-quality', 'high');
+      await page.waitForFunction(() => document.querySelector('#canvas-host canvas')?.dataset.gfxPreset === 'high');
+      await page.selectOption('#gfx-bloom', 'off');
+      await page.waitForFunction(() => /· High ·/.test(document.getElementById('gfx-summary').textContent)
+        && !/bloom/.test(document.getElementById('gfx-summary').textContent));
+      const fromPreset = await page.locator('#gfx-shadows option[value="preset"]').innerText();
+      if (fromPreset !== 'From preset (Medium)') throw new Error(`shadows label: ${fromPreset}`);
+      await page.screenshot({ path: SHOT('graphics', vpName) });
+      await page.reload({ waitUntil: 'networkidle' });
+      await page.waitForSelector('#screen-title:not([hidden])');
+      if (await canvasPreset() !== 'high') throw new Error('preset did not survive reload');
+      await page.click('#btn-settings');
+      if (await page.locator('#set-quality').inputValue() !== 'high') throw new Error('preset select not restored');
+      if (await page.locator('#gfx-bloom').inputValue() !== 'off') throw new Error('bloom override not restored');
+      // back to Auto (clears overrides): the software GPU resolves to Low, keeping the run cheap
+      await page.selectOption('#set-quality', 'auto');
+      await page.waitForFunction(() => document.querySelector('#canvas-host canvas')?.dataset.gfxPreset === 'low');
+      if (await page.locator('#gfx-bloom').inputValue() !== 'preset') throw new Error('preset change did not clear overrides');
       await page.click('#screen-settings [data-back]');
       await page.waitForSelector('#screen-title:not([hidden])');
     });
@@ -201,7 +232,7 @@ async function playPass(vpName, contextOpts, { touch }) {
 
 const browser = await chromium.launch({
   executablePath: '/usr/bin/google-chrome',
-  args: ['--no-sandbox', '--enable-unsafe-swiftshader'],
+  args: ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
 });
 
 try {

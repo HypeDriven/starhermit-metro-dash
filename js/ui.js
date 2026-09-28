@@ -6,6 +6,7 @@ import {
   JOURNEY_STAGES, CHALLENGES, LESSONS, ACHIEVEMENTS, dailyInfo,
 } from './content.js';
 import { TICKS_PER_SECOND, speedAt } from './rules.js';
+import { createGraphicsPanel } from './gfx-panel.js';
 
 export const DEFAULT_BINDINGS = {
   left: ['ArrowLeft', 'KeyA'],
@@ -21,6 +22,12 @@ export function createUI(handlers, stores) {
   const { settings } = stores;
   let lastFocus = null;
   let rebindingAction = null;
+  const gfxPanel = createGraphicsPanel({
+    root: $('gfx-section'),
+    settings,
+    getRenderer: () => handlers.getRenderer && handlers.getRenderer(),
+    onChange: () => handlers.onSettingsChanged(),
+  });
 
   // --- helpers -----------------------------------------------------------------
 
@@ -349,7 +356,6 @@ export function createUI(handlers, stores) {
     $('set-effects').value = settings.effects;
     $('set-ambience').value = settings.ambience;
     $('set-voice').value = settings.voice;
-    $('set-quality').value = settings.quality;
     $('set-reduced-motion').checked = settings.reducedMotion;
     $('set-high-contrast').checked = settings.highContrast;
     $('set-large-text').checked = settings.largeText;
@@ -357,6 +363,7 @@ export function createUI(handlers, stores) {
     $('set-hints').checked = settings.hints;
     $('set-palette').value = settings.colorPalette;
     $('set-consent').checked = !!settings.consent;
+    gfxPanel.fill();
     buildBindings();
   }
 
@@ -400,7 +407,6 @@ export function createUI(handlers, stores) {
       ['set-effects', 'effects', 'value', Number],
       ['set-ambience', 'ambience', 'value', Number],
       ['set-voice', 'voice', 'value', Number],
-      ['set-quality', 'quality', 'value', String],
       ['set-reduced-motion', 'reducedMotion', 'checked', Boolean],
       ['set-high-contrast', 'highContrast', 'checked', Boolean],
       ['set-large-text', 'largeText', 'checked', Boolean],
@@ -465,6 +471,7 @@ export function createUI(handlers, stores) {
     showPause, showInterrupt, hideInterrupt, countdown, toast, announce,
     refreshTitle, buildJourneyGrid, buildLessonList, buildChallengeList,
     renderScores, buildHelp, fillSettings, bindSettingsInputs, handleRebind,
+    refreshGraphics: () => gfxPanel.refresh(),
     applyA11yClasses,
     setScoreFilter(f) { scoreFilter = f; },
     get currentScreen() { return currentScreen; },

@@ -8,6 +8,9 @@
   <title>Metro Dash</title>
   <meta name="description" content="Metro Dash — switch lanes, jump, and slide through a stylized transit city racing from dawn to night.">
   <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three.module.js", "three/addons/": "./vendor/three/addons/" } }
+  </script>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23141a30'/><rect x='6' y='20' width='20' height='4' fill='%23ffc94d'/><rect x='8' y='8' width='4' height='10' fill='%23ff5a3c'/><rect x='14' y='5' width='4' height='13' fill='%23ff5a3c'/><rect x='20' y='10' width='4' height='8' fill='%23ff5a3c'/></svg>">
 </head>
 <body>
@@ -183,15 +186,7 @@
               <label>Voice cues <input type="range" id="set-voice" min="0" max="1" step="0.05"></label>
             </fieldset>
             <fieldset>
-              <legend>Graphics</legend>
-              <label>Quality
-                <select id="set-quality">
-                  <option value="auto">Auto</option>
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                </select>
-              </label>
+              <legend>Display</legend>
               <label><input type="checkbox" id="set-reduced-motion"> Reduced motion</label>
               <label><input type="checkbox" id="set-high-contrast"> High contrast</label>
               <label>Color palette
@@ -203,6 +198,8 @@
                 </select>
               </label>
             </fieldset>
+            <!-- Graphics quality: built by js/gfx-panel.js (quality preset #set-quality, overrides, summary) -->
+            <fieldset id="gfx-section"><legend>Graphics</legend></fieldset>
             <fieldset>
               <legend>Accessibility &amp; Controls</legend>
               <label><input type="checkbox" id="set-large-text"> Larger text</label>

@@ -478,6 +478,7 @@ function wire() {
       saveSettings(settings);
       applySettingsEffects();
     },
+    getRenderer: () => renderer,
   }, { settings });
 
   // title
@@ -602,6 +603,8 @@ function wire() {
   window.addEventListener('resize', () => renderer && renderer.resize());
   window.addEventListener('orientationchange', () => setTimeout(() => renderer && renderer.resize(), 60));
   ui.bindSettingsInputs();
+  // live cost summary / pixel size while the Settings screen is open
+  setInterval(() => { if (ui.currentScreen === 'settings') ui.refreshGraphics(); }, 700);
 }
 
 // --- boot ------------------------------------------------------------------------------------

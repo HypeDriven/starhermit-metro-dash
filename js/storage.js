@@ -77,7 +77,8 @@ export const DEFAULT_SETTINGS = {
   effects: 0.9,
   ambience: 0.5,
   voice: 0.8,
-  quality: 'auto', // 'low' | 'medium' | 'high' | 'auto'
+  quality: 'auto', // legacy single select; migrated into `graphics` (js/gfx.js migrateQuality)
+  graphics: null, // {preset, render_scale, adaptive, show_fps, <category>: tier}; null = derive from `quality`
   reducedMotion: false,
   highContrast: false,
   largeText: false,
