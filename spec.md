@@ -670,3 +670,7 @@ low tier stays cheap and the silhouettes stay unambiguous (pillar 3).
   lesson is complete.
 - **`holdToSlide`**: hold the slide input to re-arm the slide as soon as the 18-tick window ends.
 - **A durable daily board** behind the same submit contract, so ranks survive a restart.
+
+## Browser interference
+
+`browser-guard.js` (loaded from `index.html`) suppresses browser UI that gets in the way of play: the right-click context menu, the iOS long-press callout, copy / cut / paste, and page text selection. Text fields (inputs, textareas, selects, contenteditable) keep normal selection, context menu and clipboard behaviour.
