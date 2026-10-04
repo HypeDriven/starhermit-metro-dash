@@ -386,18 +386,37 @@ export function createUI(handlers, stores) {
       row.append(label, btn);
       list.appendChild(row);
     }
+    const reset = document.createElement('button');
+    reset.className = 'btn small';
+    reset.id = 'btn-reset-bindings';
+    reset.textContent = handlers.resetKeysLabel || 'Reset keys';
+    reset.addEventListener('click', () => {
+      settings.bindings = null;
+      rebindingAction = null;
+      buildBindings();
+      buildHelp();
+      handlers.onSettingsChanged();
+      if (handlers.onResetBindings) handlers.onResetBindings();
+    });
+    list.appendChild(reset);
   }
 
   function handleRebind(e) {
     if (!rebindingAction) return false;
     e.preventDefault();
     const bindings = { ...DEFAULT_BINDINGS, ...(settings.bindings || {}) };
+    // a code belongs to one action: take it away from any other action
+    for (const a of Object.keys(bindings)) {
+      if (a !== rebindingAction) bindings[a] = bindings[a].filter((c) => c !== e.code);
+    }
     bindings[rebindingAction] = [e.code];
     settings.bindings = bindings;
+    const action = rebindingAction;
     rebindingAction = null;
     buildBindings();
     buildHelp();
     handlers.onSettingsChanged();
+    if (handlers.onRebind) handlers.onRebind(action, [e.code]);
     return true;
   }
 

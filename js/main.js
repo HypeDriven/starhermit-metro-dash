@@ -15,6 +15,7 @@ import { createUI, DEFAULT_BINDINGS } from './ui.js';
 import { createRenderer } from './render.js';
 import { AudioEngine } from './audio.js';
 import { Platform } from './platform.js';
+import { shStrings } from './sh-strings.js';
 
 const settings = loadSettings();
 const progression = loadProgression();
@@ -22,6 +23,7 @@ const achievements = loadAchievements();
 const leaderboard = loadLeaderboard();
 const platform = new Platform();
 platform.consent = !!settings.consent;
+const shT = shStrings(navigator.languages || [navigator.language]);
 
 // --- cloud mirror (hosted only; localStorage stays the offline cache) ------------
 
@@ -37,7 +39,11 @@ function cloudDoc() {
 platform.getCloudDoc = cloudDoc;
 
 let applyingRemoteDoc = false;
-onDocSaved(() => { if (!applyingRemoteDoc) platform.scheduleCloudSave(); });
+onDocSaved((key) => {
+  if (applyingRemoteDoc) return;
+  platform.scheduleCloudSave();
+  if (key === 'settings') platform.pushSettings(settings); // per-player settings KV (changed keys only)
+});
 
 /** Remote-preferred load: overwrite the local docs with the cloud mirror. */
 function applyCloudDoc(doc) {
@@ -478,8 +484,22 @@ function wire() {
       saveSettings(settings);
       applySettingsEffects();
     },
+    // rebinding UI: persist to the player's StarHermit controls when signed in
+    onRebind: () => { platform.saveBindings({ ...DEFAULT_BINDINGS, ...(settings.bindings || {}) }); },
+    onResetBindings: () => { platform.resetBindings(); },
+    resetKeysLabel: shT.resetKeys,
     getRenderer: () => renderer,
   }, { settings });
+
+  // StarHermit account: sign-in (platform host, no token) / invite (signed in)
+  $('btn-signin').textContent = shT.signIn;
+  $('btn-invite').textContent = shT.invite;
+  $('btn-signin').addEventListener('click', () => platform.signIn());
+  $('btn-invite').addEventListener('click', () => {
+    const link = platform.inviteLink();
+    if (!link) return;
+    navigator.clipboard.writeText(link).then(() => ui.toast(shT.copied), () => ui.toast(shT.copyFailed));
+  });
 
   // title
   $('btn-play').addEventListener('click', () => selectContent({ ...dailyInfo(platform.now()), kind: 'daily' }));
@@ -616,6 +636,18 @@ async function boot() {
   if (platform.nickname) $('profile-chip').textContent = platform.nickname;
   platform.onSyncChange(renderSyncChip);
   renderSyncChip();
+  const refreshAccountButtons = () => {
+    $('btn-signin').hidden = !platform.canSignIn();
+    $('btn-invite').hidden = !platform.hosted;
+  };
+  platform.onAuth((a) => {
+    refreshAccountButtons();
+    renderSyncChip();
+    if (!a.signedIn) {
+      $('profile-chip').textContent = 'Guest';
+      ui.toast(shT.signedOut); // keep playing locally
+    }
+  });
 
   // cloud mirror flush when leaving the page
   window.addEventListener('pagehide', () => platform.flushCloudSave());
@@ -644,6 +676,24 @@ async function boot() {
     ui.refreshTitle(progression);
     ui.buildHelp();
   }
+  if (platform.hosted) {
+    // settings KV wins over the local / cloud copy, key by key; key bindings
+    // come from the player's StarHermit controls
+    const [kv, keys] = await Promise.all([
+      platform.loadSettings(),
+      platform.loadBindings({ ...DEFAULT_BINDINGS, ...(settings.bindings || {}) }),
+    ]);
+    for (const k of Object.keys(settings)) {
+      if (k !== 'bindings' && kv[k] !== undefined && kv[k] !== null) settings[k] = kv[k];
+    }
+    settings.bindings = keys;
+    applyingRemoteDoc = true;
+    try { saveSettings(settings); } finally { applyingRemoteDoc = false; }
+    platform.primeSettings(settings);
+    applySettingsEffects();
+    ui.buildHelp();
+  }
+  refreshAccountButtons();
 
   // offer resume of an interrupted run ("while you were away")
   for (const content of resumeCandidates()) {
