@@ -498,7 +498,9 @@ function wire() {
   $('btn-invite').addEventListener('click', () => {
     const link = platform.inviteLink();
     if (!link) return;
-    navigator.clipboard.writeText(link).then(() => ui.toast(shT.copied), () => ui.toast(shT.copyFailed));
+    // navigator.clipboard is undefined outside secure contexts: report it instead of throwing
+    const clip = navigator.clipboard?.writeText ? navigator.clipboard.writeText(link) : Promise.reject(new Error('clipboard unavailable'));
+    clip.then(() => ui.toast(shT.copied), () => ui.toast(shT.copyFailed));
   });
 
   // title
