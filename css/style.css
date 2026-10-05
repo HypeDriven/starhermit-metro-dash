@@ -63,6 +63,13 @@ body.high-contrast {
 .skip-link:focus { left: 8px; }
 
 #app { display: flex; flex-direction: column; height: 100dvh; }
+/* Large screens: every DOM UI layer zooms by --ui-scale (ui-scale.js, exactly 1 up to
+   1600x1000); the full-bleed 3D canvas stays unzoomed. vh/vw lengths inside these
+   layers are divided by the scale. */
+#topbar, #hud, #screens, .overlay, #toast-region, #fps-meter { zoom: var(--ui-scale, 1); }
+/* scaled: screen columns centre vertically when they fit (auto margins collapse to 0 when they scroll) */
+html.ui-scaled .screen > :first-child { margin-top: auto; }
+html.ui-scaled .screen > :last-child { margin-bottom: auto; }
 
 #topbar {
   display: flex;
@@ -190,20 +197,20 @@ body.left-handed #action-tray { flex-direction: row-reverse; }
 .screen[hidden] { display: none; }
 
 .screen h1 {
-  font-size: clamp(2.4rem, 7vw, 4.5rem);
-  margin: 6vh 0 0;
+  font-size: clamp(2.4rem, calc(7vw / var(--ui-scale, 1)), 4.5rem);
+  margin: calc(6vh / var(--ui-scale, 1)) 0 0;
   letter-spacing: 0.06em;
   color: var(--accent);
   text-shadow: 0 0 30px #ffc94d44;
 }
-.screen h2 { font-size: clamp(1.4rem, 4vw, 2rem); margin: 4vh 0 8px; color: var(--accent); }
+.screen h2 { font-size: clamp(1.4rem, calc(4vw / var(--ui-scale, 1)), 2rem); margin: calc(4vh / var(--ui-scale, 1)) 0 8px; color: var(--accent); }
 .tagline { color: var(--muted); margin-top: 4px; }
 .muted { color: var(--muted); max-width: 70ch; }
 .warning { color: var(--accent); max-width: 70ch; }
 .headline { font-size: 1.3rem; font-weight: 700; }
 .achievements { color: var(--accent-2); font-weight: 600; }
 
-.menu { display: flex; flex-direction: column; gap: 10px; margin-top: 4vh; width: min(320px, 86vw); }
+.menu { display: flex; flex-direction: column; gap: 10px; margin-top: calc(4vh / var(--ui-scale, 1)); width: min(320px, calc(86vw / var(--ui-scale, 1))); }
 
 .btn {
   min-height: 44px;
@@ -230,7 +237,7 @@ body.left-handed #action-tray { flex-direction: row-reverse; }
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
   gap: 10px;
-  width: min(720px, 92vw);
+  width: min(720px, calc(92vw / var(--ui-scale, 1)));
   margin-top: 16px;
 }
 .card-grid .stage-card {
@@ -256,7 +263,7 @@ body.left-handed #action-tray { flex-direction: row-reverse; }
   display: flex;
   flex-direction: column;
   gap: 10px;
-  width: min(560px, 92vw);
+  width: min(560px, calc(92vw / var(--ui-scale, 1)));
   margin-top: 12px;
 }
 .card-list .card {
@@ -277,13 +284,13 @@ body.left-handed #action-tray { flex-direction: row-reverse; }
 .facts dt { color: var(--muted); }
 .facts dd { margin: 0; font-weight: 600; }
 
-table { border-collapse: collapse; margin: 12px auto; min-width: min(420px, 90vw); }
+table { border-collapse: collapse; margin: 12px auto; min-width: min(420px, calc(90vw / var(--ui-scale, 1))); }
 th, td { padding: 8px 16px; text-align: left; border-bottom: 1px solid #ffffff1a; }
 thead th { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; }
 tfoot th, tfoot td { border-top: 2px solid var(--accent); font-weight: 800; color: var(--accent); }
 
 /* settings */
-#settings-form { width: min(560px, 92vw); text-align: left; }
+#settings-form { width: min(560px, calc(92vw / var(--ui-scale, 1))); text-align: left; }
 #settings-form fieldset {
   border: 1px solid #ffffff22;
   border-radius: 12px;
@@ -323,7 +330,7 @@ tfoot th, tfoot td { border-top: 2px solid var(--accent); font-weight: 800; colo
   .overlay > .panel { padding: 10px 16px; gap: 6px; }
   .overlay > .panel h2 { margin: 0 0 4px; font-size: 1.2rem; }
   /* six pause actions fit a 361px-tall viewport in two columns */
-  #overlay-pause .panel { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 8px; width: min(92vw, 520px); }
+  #overlay-pause .panel { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 8px; width: min(calc(92vw / var(--ui-scale, 1)), 520px); }
   #overlay-pause .panel h2 { grid-column: 1 / 3; }
   #overlay-pause .panel .btn { min-height: 44px; padding: 6px 10px; margin: 0; }
   #overlay-pause .panel .btn[hidden] { display: none; }
@@ -336,13 +343,13 @@ tfoot th, tfoot td { border-top: 2px solid var(--accent); font-weight: 800; colo
   display: flex;
   flex-direction: column;
   gap: 10px;
-  width: min(360px, 90vw);
+  width: min(360px, calc(90vw / var(--ui-scale, 1)));
   text-align: center;
 }
 .panel h2 { margin: 0 0 8px; color: var(--accent); }
 
 #countdown-text {
-  font-size: clamp(4rem, 18vw, 9rem);
+  font-size: clamp(4rem, calc(18vw / var(--ui-scale, 1)), 9rem);
   font-weight: 900;
   color: var(--accent);
   text-shadow: 0 0 40px #ffc94d66;
@@ -378,11 +385,14 @@ tfoot th, tfoot td { border-top: 2px solid var(--accent); font-weight: 800; colo
 
 /* portrait mobile: collapse side rails into a compact top row */
 @media (max-width: 700px) and (orientation: portrait) {
-  #hud-left { max-width: 46vw; }
-  #hud-right { max-width: 38vw; }
+  #hud-left { max-width: calc(46vw / var(--ui-scale, 1)); }
+  #hud-right { max-width: calc(38vw / var(--ui-scale, 1)); }
   #hud-stats dt { display: none; }
   #hud-stats dd { font-size: 0.85rem; }
   #btn-pause { left: auto; right: calc(10px + var(--sar)); transform: none; top: auto; bottom: calc(96px + var(--sab)); }
+  /* five-column scores table fits a 390px phone */
+  th, td { padding: 6px 7px; }
+  thead th { letter-spacing: 0.02em; }
 }
 
 /* landscape mobile: narrow status rail preserved, tray to the side */

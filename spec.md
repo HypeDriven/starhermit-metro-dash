@@ -329,6 +329,9 @@ Graphics (§8), Accessibility & Controls, and Data fieldsets.
   moves to the bottom-right above the tray, and the four-button touch tray sits in the thumb zone.
 - *Landscape mobile* (≤480 px tall): rails shrink to 0.8 rem and the tray moves to the right edge (mirrored
   by the left-handed setting).
+- *Large screens* (above 1600×1000): `ui-scale.js` sets `--ui-scale` (`min(w/1600, h/1000)`, capped at 2.5,
+  exactly 1 below that); the topbar, HUD, screens, overlays and toasts zoom by it (vh/vw inside them divided by
+  it) and screen columns centre vertically, while the full-bleed 3D canvas stays unzoomed.
 - *Safe areas*: `--sat/--sab/--sal/--sar` from `env(safe-area-inset-*)` pad the topbar, rails, tray and every
   screen; `viewport-fit=cover` is set.
 
