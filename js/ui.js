@@ -35,6 +35,15 @@ export function createUI(handlers, stores) {
     $('sr-status').textContent = msg;
   }
 
+  // The toast stack's height (layout px; the stack is zoomed like the screens)
+  // is reserved at the top of screens and overlays, so a toast never covers a
+  // results heading or button.
+  const toastRegion = $('toast-region');
+  new MutationObserver(() => {
+    const h = toastRegion.offsetHeight;
+    document.documentElement.style.setProperty('--toast-h', h ? `${h + 8}px` : '0px');
+  }).observe(toastRegion, { childList: true });
+
   function toast(msg, ms = 2600) {
     const el = document.createElement('div');
     el.className = 'toast';

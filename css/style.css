@@ -375,6 +375,13 @@ tfoot th, tfoot td { border-top: 2px solid var(--accent); font-weight: 800; colo
   animation: toast-in 0.25s ease-out;
 }
 @keyframes toast-in { from { opacity: 0; transform: translateY(-8px); } }
+/* a screen or overlay is up: toasts move to the top edge and the screen/overlay
+   padding reserves their height (--toast-h, set in ui.js) */
+#main:has(.screen:not([hidden]), .overlay:not([hidden])) #toast-region { top: 8px; left: 12px; right: 12px;
+  transform: none; flex-flow: row wrap; justify-content: center; align-items: flex-start; }
+.screen { padding-top: calc(20px + var(--sat) + var(--toast-h, 0px)); }
+.overlay { padding-top: calc(8px + var(--toast-h, 0px)); }
+.row > .btn.back { margin-top: 0; }
 
 /* --- Responsive --------------------------------------------------------------- */
 

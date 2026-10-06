@@ -3,7 +3,7 @@
 
 import { totalScore, speedAt } from './rules.js';
 import {
-  LESSONS, JOURNEY_STAGES, dailyInfo, practiceConfig, THEMES, ACHIEVEMENTS,
+  LESSONS, JOURNEY_STAGES, dailyInfo, practiceConfig, THEMES,
 } from './content.js';
 import { RunSession } from './session.js';
 import {
@@ -130,11 +130,9 @@ function checkAchievements(result, content) {
   if (progression.totalDistance >= 100000) unlock('distance_100k');
   if (newly.length) {
     saveAchievements(achievements);
-    for (const key of newly) {
-      const meta = ACHIEVEMENTS.find((a) => a.key === key);
-      ui.toast(`Achievement: ${meta ? meta.label : key}`);
-      audio.event('achievement');
-    }
+    // no toast: unlocks happen as the run ends and the results screen lists
+    // them (#results-achievements); a toast there only pushed the results down
+    audio.event('achievement');
   }
   return newly;
 }

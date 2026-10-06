@@ -280,7 +280,7 @@ distinct days unlocks *Regular Commuter*.
 
 **Achievements** (`ACHIEVEMENTS`, unlocked idempotently in `main.js checkAchievements`): First Arrival (finish
 any run), Graduate (all five lessons), Mid-Line (journey 20), End of the Line (journey 40), Regular Commuter
-(3 daily days), Long Haul (100 000 total units).
+(3 daily days), Long Haul (100 000 total units). Unlocks happen as a run ends; the results screen lists them and plays the `achievement` cue (no toast).
 
 **Unlocks.** Journey stage *n* requires stage *n−1* completed; nothing else is gated. Progress lives in
 `metro-dash:progression` and is resettable from Settings → Data.
@@ -332,6 +332,9 @@ Graphics (§8), Accessibility & Controls, and Data fieldsets.
 - *Large screens* (above 1600×1000): `ui-scale.js` sets `--ui-scale` (`min(w/1600, h/1000)`, capped at 2.5,
   exactly 1 below that); the topbar, HUD, screens, overlays and toasts zoom by it (vh/vw inside them divided by
   it) and screen columns centre vertically, while the full-bleed 3D canvas stays unzoomed.
+- *Toasts*: below the topbar in play; while a screen or overlay is up they move to a wrapping row at the
+  top of the stage and the screen/overlay top padding reserves their height (`--toast-h`, measured in `ui.js`),
+  so they never cover a heading or button.
 - *Safe areas*: `--sat/--sab/--sal/--sar` from `env(safe-area-inset-*)` pad the topbar, rails, tray and every
   screen; `viewport-fit=cover` is set.
 
@@ -463,7 +466,7 @@ WebAudio synth fallback that plays while the sample decodes or if it fails to lo
 | `countdown` | `countdown-beep.opus` | Clean mid electronic beep | Voice bus; 3-2-1 at 700 ms spacing |
 | `go` | `go-signal.opus` | Higher sustained start tone | Voice bus; control unlocks on the same frame |
 | `ui` | `ui-tap.opus` | Soft plastic button press | Menu and pause interactions |
-| `achievement` | `achievement.opus` | Two-tone chime with a medal sparkle | Each newly unlocked achievement |
+| `achievement` | `achievement.opus` | Two-tone chime with a medal sparkle | A run that unlocks achievements |
 | `rewind` | `rewind.opus` | Reverse tape swoosh with a settling click | Practice "Rewind 5s" restores a checkpoint |
 | `best` | `personal-best.opus` | Rising three-note flourish with a shimmer tail | Results screen, only when an existing personal best is beaten |
 
