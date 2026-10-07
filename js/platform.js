@@ -150,6 +150,26 @@ export class Platform {
   }
   resetBindings() { return this.hosted ? this.sh.resetControls() : Promise.resolve(null); }
 
+  // --- platform leaderboard (score-script.js) -------------------------------------
+
+  /**
+   * Post a finished run's score to the `high-score` board; resolves { posted, rank }
+   * — the player's rank on that board, or null. Standalone → not posted, no request.
+   */
+  async submitScore(score) {
+    if (!this.hosted || typeof this.sh.submitScores !== 'function') return { posted: false, rank: null };
+    let keys = [];
+    try { keys = await this.sh.submitScores({ 'high-score': Math.max(0, Math.round(score)) }); } catch { keys = []; }
+    if (!keys.includes('high-score')) return { posted: false, rank: null };
+    try {
+      const r = await this.sh.leaderboard('high-score', { pageSize: 100 });
+      const me = (r.items || []).find((i) => i.userId === this.userId);
+      return { posted: true, rank: me ? me.rank : null };
+    } catch {
+      return { posted: true, rank: null };
+    }
+  }
+
   // --- daily validation (this game's own server.js backend, localhost only) ---------
 
   /** Submit a daily replay for authoritative validation. Returns verdict or null. */

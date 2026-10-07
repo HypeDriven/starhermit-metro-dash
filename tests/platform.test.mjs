@@ -111,7 +111,30 @@ test('standalone: zero platform fetches; sign-in only on the platform host', asy
   await p.saveBindings({ jump: ['KeyJ'] });
   assert.equal(p.canSignIn(), true);
   assert.equal(p.inviteLink(), null);
+  assert.deepEqual(await p.submitScore(1200), { posted: false, rank: null });
   assert.equal(f.calls.length, 0);
   const local = fixture('http://localhost:8080/');
   assert.equal(new Platform({ sh: local.sh, hostname: local.hostname }).canSignIn(), false);
+});
+
+test('hosted: submitScore posts high-score and reads the rank', async () => {
+  const f = fixture('https://metro-dash.starhermit.com/#game_token={jwt}');
+  const p = new Platform({ sh: f.sh, hostname: f.hostname });
+  const sent = [];
+  f.sh.submitScores = async (sc) => { sent.push(sc); return Object.keys(sc); };
+  f.sh.leaderboard = async (key) => ({ items: key === 'high-score' ? [{ userId: p.userId, rank: 2 }] : [] });
+  assert.deepEqual(await p.submitScore(3456.7), { posted: true, rank: 2 });
+  assert.deepEqual(sent, [{ 'high-score': 3457 }]);
+  f.sh.submitScores = async () => [];
+  assert.deepEqual(await p.submitScore(1), { posted: false, rank: null });
+});
+
+test('leaderboard line strings in every locale', async () => {
+  const { SH_STRINGS } = await import('../js/sh-strings.js');
+  assert.equal(Object.keys(SH_STRINGS).length, 9);
+  for (const [l, t] of Object.entries(SH_STRINGS)) {
+    for (const k of ['lbPosting', 'lbRank', 'lbPosted', 'lbNotPosted']) assert.ok(t[k], l + ' ' + k);
+    assert.ok(t.lbRank.includes('{rank}'));
+  }
+  assert.equal(SH_STRINGS['fr-CA'].lbPosting, 'Envoi du pointage au classement…');
 });

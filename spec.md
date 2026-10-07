@@ -45,7 +45,8 @@ jump, or slide — one tick at a time.
 | `starhermit-sdk.js` | Shared StarHermit client (unmodified copy). |
 | `js/sh-strings.js` | Account strings (sign-in, invite, toasts, Reset keys) in the nine locales. |
 | `js/rng.js` | `fnv1a` and a mulberry32 `Rng` with `int`/`pick`/`chance`/`fork`/`clone`. |
-| `server.js` | StarHermit authoritative script: static serving + `/api/v1/*`, replay-validated daily board. |
+| `score-script.js` | StarHermit platform script (`server=`): range-checks a finished run's score and posts it to the `high-score` leaderboard (canonical copy in the games repo's `tools/score-script.js`). |
+| `server.js` | Local dev server: static serving + `/api/v1/*`, replay-validated daily board. |
 | `tests/rules.test.mjs` | `npm test` — rules, determinism, replay, serialization, content validation. |
 | `tests/gfx.test.mjs` | `npm test` (`node --test`) — GPU detection, preset/override/scale resolution, preset clears overrides, locale coverage. |
 | `tests/platform.test.mjs` | `npm test` (`node --test`) — StarHermit adapter over the real SDK with a stubbed fetch: token, nickname, `game:<slug>` cloud save, settings KV, controls save/load/reset, invite, zero fetches standalone. |
@@ -516,7 +517,7 @@ longer than English fit without clipping at 390 px.
 
 ## 12. StarHermit integration
 
-`starhermit.txt` declares `name`, `launch=index.html`, `owner`, `server=server.js`, `cover=coverart.png`.
+`starhermit.txt` declares `name`, `launch=index.html`, `owner`, `server=score-script.js`, `cover=coverart.png`.
 Conventions per <https://wiki.starhermit.com/>.
 
 All platform calls go through the shared client `starhermit-sdk.js` (loaded before the game
@@ -545,8 +546,13 @@ modules) via `js/platform.js`; hosted mode means signed in. `starhermit.txt` als
   cards and remap list show the effective keys.
 - *Invite link* — signed-in players get **Invite a friend** on the title, copying
   `StarHermit.inviteLink()` with a confirmation toast.
+- *Leaderboard* — every finished Journey, Daily or Challenge run (not Practice, lessons or a
+  quit) posts its score through `StarHermit.submitScores` (a practice session whose `score-script.js`
+  posts it to the `high-score` board: integer, higher is better, 0–1,000,000). The results screen shows
+  "Posting score…", then "Leaderboard rank: #N" (or posted / not posted). Standalone posts nothing and
+  shows no line.
 
-Account strings (sign-in, invite, toasts, Reset keys) are localized in the nine locales (`js/sh-strings.js`).
+Account strings (sign-in, invite, toasts, Reset keys, leaderboard line) are localized in the nine locales (`js/sh-strings.js`).
 
 **Local dev only.** With a token on `localhost`, the game's own `server.js` also serves `GET /api/v1/time`
 (round-trip adjusted, drives the clock chip and daily day), `POST /api/v1/daily/submit` (`{envelope, day}`:
@@ -558,8 +564,8 @@ no such per-game routes, so on StarHermit none of them is requested and the loca
 clock stand.
 
 **Not used.** No platform achievement API (achievements are local, cloud-mirrored), no platform
-leaderboard (`server.js` is a standalone Node host, not a platform game script, so it reports no scores;
-boards are local), no platform sessions, replays, friend-picker invites, matchmaking, party, chat or
+leaderboard reads in the UI (the per-mode boards on the Scores screen are local), no platform sessions
+beyond the score post's practice session, replays, friend-picker invites, matchmaking, party, chat or
 realtime multiplayer —
 the game is single-player with asynchronous daily competition.
 

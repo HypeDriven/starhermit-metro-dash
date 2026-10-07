@@ -276,7 +276,23 @@ function handleRunEnd(result, envelope, state) {
 
   track('run_end', { mode: content.kind, reason: result.reason, score: result.score });
   ui.showResults(result, { isBest, bestScore, newAchievements, nextContent, content });
+  postToLeaderboard(content.kind !== 'practice' && content.kind !== 'learn' && result.reason !== 'quit', result.score);
   ui.refreshTitle(progression);
+}
+
+// Signed in only: post a finished run (not practice, lessons or quits) and show the board rank.
+let lbSeq = 0;
+function postToLeaderboard(eligible, score) {
+  const line = $('results-lb');
+  const seq = ++lbSeq;
+  if (!eligible || !platform.hosted) { line.hidden = true; return; }
+  line.hidden = false;
+  line.textContent = shT.lbPosting;
+  platform.submitScore(score).then((r) => {
+    if (seq !== lbSeq) return;
+    line.textContent = !r.posted ? shT.lbNotPosted
+      : r.rank ? shT.lbRank.replace('{rank}', r.rank) : shT.lbPosted;
+  });
 }
 
 function pauseGame() {
