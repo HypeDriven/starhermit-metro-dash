@@ -708,7 +708,7 @@ export function createThreeRenderer(container, opts) {
     if (composer) {
       if (gradePass) gradePass.uniforms.uNight.value = night;
       try {
-        composer.render(dtMs / 1000);
+        (globalThis.GameOptions ? globalThis.GameOptions.draw(composer.renderer, () => composer.render(dtMs / 1000)) : composer.render(dtMs / 1000));
         return;
       } catch {
         postFailed = true;
@@ -716,7 +716,7 @@ export function createThreeRenderer(container, opts) {
         postKey = null;
       }
     }
-    renderer.render(scene, camera);
+    (globalThis.GameOptions ? globalThis.GameOptions.draw(renderer, () => renderer.render(scene, camera)) : renderer.render(scene, camera));
   }
 
   function applyPalette() {
