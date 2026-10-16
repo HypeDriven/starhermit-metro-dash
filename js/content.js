@@ -3,6 +3,7 @@
 // config, goals, allowed mechanics, par values, tutorial flags, and theme.
 
 import { fnv1a } from './rng.js';
+import { N } from './lang.js';
 import { createInitialState, step, totalScore, legalActionMap, speedAt, TICKS_PER_SECOND } from './rules.js';
 
 export const CONTENT_VERSION = 1;
@@ -14,7 +15,7 @@ export const CONTENT_VERSION = 1;
 export const THEMES = {
   dawn: {
     id: 'dawn',
-    label: 'Harbor Dawn',
+    label: N('Harbor Dawn'),
     skyTop: 0x2e3a67, skyBottom: 0xf2a56b, fog: 0xd98f6a,
     sun: 0xffd9a0, sunIntensity: 1.6, hemi: 0.7,
     building: 0x3b3f5c, window: 0xffd38a, ground: 0x4a4550, accent: 0xffb347,
@@ -22,7 +23,7 @@ export const THEMES = {
   },
   day: {
     id: 'day',
-    label: 'Civic Noon',
+    label: N('Civic Noon'),
     skyTop: 0x3f7fd0, skyBottom: 0xbfe3f2, fog: 0xa8c8d8,
     sun: 0xfff4d6, sunIntensity: 2.0, hemi: 0.9,
     building: 0x5a6b7d, window: 0xe8f4ff, ground: 0x5d6066, accent: 0x2f9e8f,
@@ -30,7 +31,7 @@ export const THEMES = {
   },
   dusk: {
     id: 'dusk',
-    label: 'Ember Dusk',
+    label: N('Ember Dusk'),
     skyTop: 0x35255c, skyBottom: 0xe2614d, fog: 0xb06a6a,
     sun: 0xff9a5c, sunIntensity: 1.4, hemi: 0.6,
     building: 0x413553, window: 0xffc27a, ground: 0x4a4148, accent: 0xff7a59,
@@ -38,7 +39,7 @@ export const THEMES = {
   },
   night: {
     id: 'night',
-    label: 'Neon Night',
+    label: N('Neon Night'),
     skyTop: 0x070b1e, skyBottom: 0x1b2440, fog: 0x141a30,
     sun: 0x9db4ff, sunIntensity: 0.7, hemi: 0.35,
     building: 0x1c2238, window: 0x7fe7ff, ground: 0x232636, accent: 0x7fe7ff,
@@ -46,7 +47,7 @@ export const THEMES = {
   },
   mono: {
     id: 'mono',
-    label: 'Monorail Mist',
+    label: N('Monorail Mist'),
     skyTop: 0x46555e, skyBottom: 0x9db4b8, fog: 0x8aa0a4,
     sun: 0xf2f2e8, sunIntensity: 1.5, hemi: 0.8,
     building: 0x55666c, window: 0xfff2c8, ground: 0x525a58, accent: 0xd9f26b,
@@ -73,9 +74,9 @@ const coinLine = (z, lane, n = 4) => Array.from({ length: n }, (_, i) => ({ z: z
 export const LESSONS = [
   {
     id: 'learn-lanes',
-    label: 'Lesson 1: Switch Lanes',
+    label: N('Lesson 1: Switch Lanes'),
     teaches: 'left/right',
-    briefing: 'Trains own the rails — you own the gaps. Switch lanes to dodge the kiosks ahead.',
+    briefing: N('Trains own the rails — you own the gaps. Switch lanes to dodge the kiosks ahead.'),
     seed: fnv1a('lesson:lanes'),
     config: {
       goal: { type: 'actions', action: 'laneChange', value: 2 },
@@ -91,9 +92,9 @@ export const LESSONS = [
   },
   {
     id: 'learn-jump',
-    label: 'Lesson 2: Jump',
+    label: N('Lesson 2: Jump'),
     teaches: 'jump',
-    briefing: 'Track barriers are knee-high. Jump clears them — time it as you arrive.',
+    briefing: N('Track barriers are knee-high. Jump clears them — time it as you arrive.'),
     seed: fnv1a('lesson:jump'),
     config: {
       goal: { type: 'actions', action: 'jump', value: 3 },
@@ -108,9 +109,9 @@ export const LESSONS = [
   },
   {
     id: 'learn-slide',
-    label: 'Lesson 3: Slide',
+    label: N('Lesson 3: Slide'),
     teaches: 'slide',
-    briefing: 'Overhead signs hang low. Slide under them and pop back up running.',
+    briefing: N('Overhead signs hang low. Slide under them and pop back up running.'),
     seed: fnv1a('lesson:slide'),
     config: {
       goal: { type: 'actions', action: 'slide', value: 3 },
@@ -125,9 +126,9 @@ export const LESSONS = [
   },
   {
     id: 'learn-coins',
-    label: 'Lesson 4: Collect',
+    label: N('Lesson 4: Collect'),
     teaches: 'coins',
-    briefing: 'Metro tokens line the fastest routes. Ride the line and grab 6 of them.',
+    briefing: N('Metro tokens line the fastest routes. Ride the line and grab 6 of them.'),
     seed: fnv1a('lesson:coins'),
     config: {
       goal: { type: 'coins', value: 6 },
@@ -141,9 +142,9 @@ export const LESSONS = [
   },
   {
     id: 'learn-combo',
-    label: 'Lesson 5: Full Run',
+    label: N('Lesson 5: Full Run'),
     teaches: 'combined',
-    briefing: 'Everything at once: lanes, jumps, slides, tokens. Reach the marker.',
+    briefing: N('Everything at once: lanes, jumps, slides, tokens. Reach the marker.'),
     seed: fnv1a('lesson:combo'),
     config: {
       goal: { type: 'distance', value: 900 },
@@ -166,13 +167,13 @@ export const LESSONS = [
 function buildJourney() {
   const stages = [];
   const mechanics = [
-    { key: 'barrier', label: 'Barriers', at: 1 },
-    { key: 'sign', label: 'Overhead signs', at: 6 },
-    { key: 'block', label: 'Kiosks (lane change only)', at: 11 },
-    { key: 'coins', label: 'Token routes', at: 16 },
-    { key: 'speed', label: 'Express speed', at: 21 },
-    { key: 'dense', label: 'Rush hour density', at: 26 },
-    { key: 'mixed', label: 'Mixed traffic', at: 31 },
+    { key: 'barrier', label: N('Barriers'), at: 1 },
+    { key: 'sign', label: N('Overhead signs'), at: 6 },
+    { key: 'block', label: N('Kiosks (lane change only)'), at: 11 },
+    { key: 'coins', label: N('Token routes'), at: 16 },
+    { key: 'speed', label: N('Express speed'), at: 21 },
+    { key: 'dense', label: N('Rush hour density'), at: 26 },
+    { key: 'mixed', label: N('Mixed traffic'), at: 31 },
   ];
   for (let i = 1; i <= 40; i++) {
     const mastery = i % 5 === 0;
@@ -214,9 +215,9 @@ export const JOURNEY_STAGES = buildJourney();
 export const CHALLENGES = [
   {
     id: 'ch-grounded',
-    label: 'Grounded',
+    label: N('Grounded'),
     kind: 'challenge',
-    briefing: 'No jumping allowed. Slide and weave 1600 units through the city.',
+    briefing: N('No jumping allowed. Slide and weave 1600 units through the city.'),
     seed: fnv1a('challenge:grounded'),
     theme: 'dusk',
     config: {
@@ -229,9 +230,9 @@ export const CHALLENGES = [
   },
   {
     id: 'ch-upright',
-    label: 'Stay Upright',
+    label: N('Stay Upright'),
     kind: 'challenge',
-    briefing: 'No sliding. Jump and dodge your way to 1600 units.',
+    briefing: N('No sliding. Jump and dodge your way to 1600 units.'),
     seed: fnv1a('challenge:upright'),
     theme: 'day',
     config: {
@@ -243,9 +244,9 @@ export const CHALLENGES = [
   },
   {
     id: 'ch-center-lock',
-    label: 'Center Lock',
+    label: N('Center Lock'),
     kind: 'challenge',
-    briefing: 'Locked to the center lane — only jumps and slides. Kiosks are rerouted. Survive 1200 units.',
+    briefing: N('Locked to the center lane — only jumps and slides. Kiosks are rerouted. Survive 1200 units.'),
     seed: fnv1a('challenge:center-lock'),
     theme: 'night',
     config: {
@@ -258,9 +259,9 @@ export const CHALLENGES = [
   },
   {
     id: 'ch-move-budget',
-    label: 'Minimalist',
+    label: N('Minimalist'),
     kind: 'challenge',
-    briefing: 'Only 30 moves. Plan every one and reach 1400 units.',
+    briefing: N('Only 30 moves. Plan every one and reach 1400 units.'),
     seed: fnv1a('challenge:minimalist'),
     theme: 'mono',
     config: {
@@ -273,9 +274,9 @@ export const CHALLENGES = [
   },
   {
     id: 'ch-express',
-    label: 'Express Service',
+    label: N('Express Service'),
     kind: 'challenge',
-    briefing: 'Double speed. Reach 2000 units without a scratch.',
+    briefing: N('Double speed. Reach 2000 units without a scratch.'),
     seed: fnv1a('challenge:express'),
     theme: 'night',
     config: {
@@ -286,9 +287,9 @@ export const CHALLENGES = [
   },
   {
     id: 'ch-token-rush',
-    label: 'Token Rush',
+    label: N('Token Rush'),
     kind: 'challenge',
-    briefing: 'Collect 25 tokens before the line runs out.',
+    briefing: N('Collect 25 tokens before the line runs out.'),
     seed: fnv1a('challenge:token-rush'),
     theme: 'dawn',
     config: {
@@ -321,9 +322,9 @@ export function dailyInfo(date = new Date()) {
 
 export function practiceConfig(difficulty) {
   const table = {
-    relaxed: { speedScale: 0.7, label: 'Relaxed' },
-    standard: { speedScale: 1.0, label: 'Standard' },
-    intense: { speedScale: 1.3, label: 'Intense' },
+    relaxed: { speedScale: 0.7, label: N('Relaxed') },
+    standard: { speedScale: 1.0, label: N('Standard') },
+    intense: { speedScale: 1.3, label: N('Intense') },
   };
   const d = table[difficulty] || table.standard;
   return { id: `practice-${difficulty}`, kind: 'practice', label: `Practice — ${d.label}`, config: { goal: null, speedScale: d.speedScale }, theme: 'day' };
@@ -334,12 +335,12 @@ export function practiceConfig(difficulty) {
 // ---------------------------------------------------------------------------
 
 export const ACHIEVEMENTS = [
-  { key: 'first_finish', label: 'First Arrival', desc: 'Finish any run.' },
-  { key: 'lesson_graduate', label: 'Graduate', desc: 'Complete all five lessons.' },
-  { key: 'journey_20', label: 'Mid-Line', desc: 'Complete journey stage 20.' },
-  { key: 'journey_40', label: 'End of the Line', desc: 'Complete journey stage 40.' },
-  { key: 'streak_3', label: 'Regular Commuter', desc: 'Play the daily run on 3 different days.' },
-  { key: 'distance_100k', label: 'Long Haul', desc: 'Travel 100,000 units in total.' },
+  { key: 'first_finish', label: N('First Arrival'), desc: N('Finish any run.') },
+  { key: 'lesson_graduate', label: N('Graduate'), desc: N('Complete all five lessons.') },
+  { key: 'journey_20', label: N('Mid-Line'), desc: N('Complete journey stage 20.') },
+  { key: 'journey_40', label: N('End of the Line'), desc: N('Complete journey stage 40.') },
+  { key: 'streak_3', label: N('Regular Commuter'), desc: N('Play the daily run on 3 different days.') },
+  { key: 'distance_100k', label: N('Long Haul'), desc: N('Travel 100,000 units in total.') },
 ];
 
 // ---------------------------------------------------------------------------

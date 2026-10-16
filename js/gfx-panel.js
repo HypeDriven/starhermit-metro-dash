@@ -4,11 +4,13 @@
 
 import { CATEGORIES, PRESETS, choosePreset, describe, migrateQuality, presetTier } from './gfx.js';
 import { gfxStrings } from './gfx-strings.js';
+import { lang } from './lang.js';
 
 const fmt = (s, tier) => s.replace('{tier}', tier);
 
 export function createGraphicsPanel({ root, settings, getRenderer, onChange }) {
-  const t = gfxStrings(typeof navigator !== 'undefined' ? navigator.languages || [navigator.language] : []);
+  // Strings follow the game language (js/i18n.js); relabel() switches them live.
+  let t = gfxStrings([lang()]);
   const saved = () => settings.graphics || { preset: migrateQuality(settings.quality) };
   const presetName = (p) => t.presets[p] || p;
   const tierName = (tier) => t.tiers[tier] || tier;
@@ -18,14 +20,17 @@ export function createGraphicsPanel({ root, settings, getRenderer, onChange }) {
   legend.textContent = t.legend;
   root.append(legend);
 
-  function row(labelText, control, extra) {
+  const labels = []; // [span, () => text] for relabel()
+  function row(labelText, control, extra, textOf) {
     const label = document.createElement('label');
     const span = document.createElement('span');
-    span.textContent = labelText;
+    const text = document.createTextNode(labelText);
+    span.append(text);
     label.append(span);
     if (extra) span.append(' ', extra);
     label.append(control);
     root.append(label);
+    if (textOf) labels.push([text, textOf]);
     return label;
   }
   function select(id, key) {
@@ -46,7 +51,7 @@ export function createGraphicsPanel({ root, settings, getRenderer, onChange }) {
   const presetSel = select('set-quality', 'preset');
   const autoOpt = option(presetSel, 'auto', t.auto);
   for (const p of PRESETS) option(presetSel, p, presetName(p));
-  row(t.quality, presetSel);
+  row(t.quality, presetSel, null, () => t.quality);
 
   // Render scale
   const scale = document.createElement('input');
@@ -57,7 +62,7 @@ export function createGraphicsPanel({ root, settings, getRenderer, onChange }) {
   const scaleOut = document.createElement('output');
   scaleOut.id = 'gfx-scale-value';
   scaleOut.htmlFor = 'gfx-scale';
-  row(t.renderScale, scale, scaleOut).classList.add('gfx-scale-row');
+  row(t.renderScale, scale, scaleOut, () => t.renderScale).classList.add('gfx-scale-row');
 
   // Per-category overrides
   const catSel = {};
@@ -66,7 +71,7 @@ export function createGraphicsPanel({ root, settings, getRenderer, onChange }) {
     option(el, 'preset', '');
     for (const tier of tiers) option(el, tier, tierName(tier));
     catSel[cat] = el;
-    row(t.cats[cat], el);
+    row(t.cats[cat], el, null, () => t.cats[cat]);
   }
 
   function checkbox(id, key, text) {
@@ -76,8 +81,10 @@ export function createGraphicsPanel({ root, settings, getRenderer, onChange }) {
     el.type = 'checkbox';
     el.id = id;
     el.dataset.gfx = key;
-    label.append(el, ' ', text);
+    const node = document.createTextNode(text);
+    label.append(el, ' ', node);
     root.append(label);
+    labels.push([node, () => (key === 'adaptive' ? t.adaptive : t.showFps)]);
     return el;
   }
   const adaptive = checkbox('gfx-adaptive', 'adaptive', t.adaptive);
@@ -153,5 +160,15 @@ export function createGraphicsPanel({ root, settings, getRenderer, onChange }) {
     note.hidden = !info.postFailed;
   }
 
-  return { fill, refresh };
+  /** Switch every label to the current game language, then re-sync values. */
+  function relabel() {
+    t = gfxStrings([lang()]);
+    legend.textContent = t.legend;
+    for (const [node, textOf] of labels) node.textContent = textOf();
+    for (const o of presetSel.options) if (o.value !== 'auto') o.textContent = presetName(o.value);
+    for (const el of Object.values(catSel)) for (const o of el.options) if (o.value !== 'preset') o.textContent = tierName(o.value);
+    fill();
+  }
+
+  return { fill, refresh, relabel };
 }

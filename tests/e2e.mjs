@@ -21,9 +21,11 @@ import { readFile } from 'node:fs/promises';
 import { join, extname, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
+import { stubStarHermit, launchToken } from './starhermit-e2e.mjs';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
-const SHOT = (stage, vp) => `/tmp/metro-dash-e2e-${stage}-${vp}.png`;
+// Screenshots go to $E2E_SHOT_DIR (default /tmp).
+const SHOT = (stage, vp) => join(process.env.E2E_SHOT_DIR || '/tmp', `metro-dash-e2e-${stage}-${vp}.png`);
 
 // benign GPU/swiftshader noise (from tools/production_game_audit.mjs)
 const browserNoise = /GL Driver Message|GPU stall due to ReadPixels|Automatic fallback to software WebGL|EnableWebGLDeveloperExtensions/i;
@@ -69,6 +71,76 @@ const step = async (name, fn) => {
   await fn();
   console.log(`ok - ${name}`);
 };
+
+/* Signed-in language flow in its own context (stubbed StarHermit API). */
+async function languagePass(vpName, contextOpts, { touch }) {
+  const context = await browser.newContext(contextOpts);
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
+  page.on('console', (m) => {
+    if ((m.type() === 'error' || m.type() === 'warning') && !browserNoise.test(m.text())) errors.push(`console ${m.type()}: ${m.text()}`);
+  });
+  try {
+    const calls = await stubStarHermit(page, { preferredLanguage: 'fr-CA' });
+    await page.goto('about:blank');
+    await page.goto(BASE + 'index.html#game_token=' + launchToken(), { waitUntil: 'load' });
+    await page.waitForFunction(() => document.documentElement.lang === 'fr-CA');
+    await page.waitForSelector('#screen-title:not([hidden])', { timeout: 10000 });
+    if (!/^Jouer la course du jour/.test(await page.locator('#btn-play').innerText())) throw new Error('title not in French');
+    // Start the daily run in French, pause, then switch language mid-run.
+    await page.click('#btn-play');
+    await page.waitForSelector('#screen-setup:not([hidden])');
+    if (!/Classé/.test(await page.locator('#setup-facts').innerText())) throw new Error('briefing not in French');
+    await page.click('#btn-setup-start');
+    await page.waitForFunction(() => window.__md.state === 'active', null, { timeout: 10000 });
+    if (touch) await page.click('#btn-pause');
+    else await page.keyboard.press('Escape');
+    await page.waitForSelector('#overlay-pause:not([hidden])');
+    await page.click('#btn-pause-settings');
+    await page.waitForSelector('#screen-settings:not([hidden])');
+    const choice = page.locator('[data-game-language="choice"]');
+    await choice.scrollIntoViewIfNeeded();
+    const auto = await choice.locator('option').first().textContent();
+    if (!/^Automatique — Français \(Canada\)$/.test(auto)) throw new Error('Automatic label not resolved: ' + auto);
+    await choice.selectOption('it-IT');
+    await page.waitForFunction(() => document.documentElement.lang === 'it-IT');
+    await page.waitForFunction(() => /Salvato/.test(document.querySelector('[data-game-language="status"]').textContent));
+    if (calls.settings['ui.language']?.choice !== 'it-IT') throw new Error('ui.language not saved: ' + JSON.stringify(calls.settings));
+    if ((await page.locator('#settings-h').innerText()).trim() !== 'Impostazioni') throw new Error('settings title not re-rendered');
+    if ((await page.locator('#gfx-section legend').first().innerText()).trim() !== 'Grafica') throw new Error('graphics legend not re-rendered');
+    await page.getByLabel('Movimento ridotto', { exact: true }).waitFor();
+    await page.locator('[data-game-report="title"]').scrollIntoViewIfNeeded();
+    await page.fill('[data-game-report="title"]', 'Test report');
+    await page.click('[data-game-report="send"]');
+    await page.waitForFunction(() => /Grazie/.test(document.querySelector('[data-game-report="status"]').textContent));
+    if (!calls.reports?.[0] || calls.reports[0].kind !== 'bug') throw new Error('report not posted');
+    await page.screenshot({ path: SHOT('language', vpName) });
+    // Back to the paused run: same session, Italian pause sheet and HUD.
+    await page.locator('#screen-settings [data-back]').scrollIntoViewIfNeeded();
+    await page.click('#screen-settings [data-back]');
+    await page.waitForSelector('#overlay-pause:not([hidden])');
+    if ((await page.locator('#pause-h').innerText()).trim() !== 'In pausa') throw new Error('pause overlay not re-rendered');
+    if ((await page.evaluate(() => window.__md.state)) !== 'paused') throw new Error('run did not survive the language change');
+    await page.click('#btn-resume');
+    await page.waitForFunction(() => window.__md.state === 'active', null, { timeout: 10000 });
+    if ((await page.locator('#hud-stats dt').nth(1).innerText()).trim() !== 'Distanza') throw new Error('HUD not re-rendered');
+    if (!/^Sopravvivi/.test(await page.locator('#hud-objective').innerText())) throw new Error('objective not re-rendered');
+    await page.screenshot({ path: SHOT('language-hud', vpName) });
+    // Back to Automatic → fr-CA (from the title Settings).
+    if (touch) await page.click('#btn-pause');
+    else await page.keyboard.press('Escape');
+    await page.waitForSelector('#overlay-pause:not([hidden])');
+    await page.click('#btn-pause-settings');
+    await choice.scrollIntoViewIfNeeded();
+    await choice.selectOption('auto');
+    await page.waitForFunction(() => document.documentElement.lang === 'fr-CA');
+    if (calls.settings['ui.language']?.choice !== 'auto') throw new Error('ui.language auto not saved');
+  } finally {
+    await context.close();
+  }
+  if (errors.length) throw new Error(`language pass page errors:\n  ${errors.join('\n  ')}`);
+}
 
 async function playPass(vpName, contextOpts, { touch }) {
   const context = await browser.newContext(contextOpts);
@@ -152,6 +224,10 @@ async function playPass(vpName, contextOpts, { touch }) {
       if (await page.locator('#gfx-bloom').inputValue() !== 'preset') throw new Error('preset change did not clear overrides');
       await page.click('#screen-settings [data-back]');
       await page.waitForSelector('#screen-title:not([hidden])');
+    });
+
+    await step(`${vpName}: Language — Automatic follows the StarHermit preferred language; switching mid-run re-renders; ui.language; report a problem`, async () => {
+      await languagePass(vpName, contextOpts, { touch });
     });
 
     await step(`${vpName}: daily run briefing → countdown → active`, async () => {

@@ -16,13 +16,16 @@
 <script src="ui-scale.js"></script>
 <script src="browser-guard.js"></script>
 <script src="starhermit-sdk.js"></script>
+<script src="sh-language.js"></script>
+<script src="js/strings.js"></script>
+<script src="js/i18n.js"></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to game</a>
   <div id="app">
     <header id="topbar" aria-label="Status">
-      <span id="brand" aria-hidden="true">METRO&nbsp;DASH</span>
-      <span id="profile-chip" class="chip">Guest</span>
+      <span id="brand" aria-hidden="true" data-i18n-skip>METRO&nbsp;DASH</span>
+      <span id="profile-chip" class="chip" data-i18n-skip></span>
       <span id="sync-chip" class="chip" hidden></span>
       <span id="clock-chip" class="chip" title="Server-synced time"></span>
       <button id="btn-audio-toggle" class="icon-btn" aria-label="Toggle sound" aria-pressed="false">♪</button>
@@ -61,10 +64,10 @@
       <div id="screens">
         <!-- Title -->
         <section id="screen-title" class="screen" aria-labelledby="title-h">
-          <h1 id="title-h">Metro Dash</h1>
+          <h1 id="title-h" data-i18n-skip>Metro Dash</h1>
           <p class="tagline">Three lanes. One city. Dawn to night.</p>
           <nav class="menu" aria-label="Main menu">
-            <button id="btn-play" class="btn primary">Play Daily Run</button>
+            <button id="btn-play" class="btn primary" data-i18n-skip></button>
             <button id="btn-journey" class="btn">Journey</button>
             <button id="btn-learn" class="btn">Learn</button>
             <button id="btn-practice" class="btn">Practice</button>
@@ -72,8 +75,8 @@
             <button id="btn-scores" class="btn">Scores</button>
             <button id="btn-settings" class="btn">Settings</button>
             <button id="btn-help" class="btn">How to Play</button>
-            <button id="btn-signin" class="btn" hidden>Sign in with StarHermit</button>
-            <button id="btn-invite" class="btn" hidden>Invite a friend</button>
+            <button id="btn-signin" class="btn" hidden data-i18n-skip>Sign in with StarHermit</button>
+            <button id="btn-invite" class="btn" hidden data-i18n-skip>Invite a friend</button>
           </nav>
           <p id="title-progress" class="muted"></p>
           <p id="webgl-warning" class="warning" hidden>3D graphics unavailable — running in compatibility mode. Your progress is safe.</p>
@@ -172,10 +175,10 @@
           <div id="help-cards" class="card-list"></div>
           <h3>Rules</h3>
           <ul>
-            <li><strong>Barrier</strong> (striped, low) — jump over it or change lane.</li>
-            <li><strong>Sign</strong> (overhead panel) — slide under it or change lane.</li>
-            <li><strong>Kiosk</strong> (full height) — change lane; jumping and sliding won't help.</li>
-            <li><strong>Tokens</strong> — score bonus; high tokens need a jump.</li>
+            <li data-i18n-html><strong>Barrier</strong> (striped, low) — jump over it or change lane.</li>
+            <li data-i18n-html><strong>Sign</strong> (overhead panel) — slide under it or change lane.</li>
+            <li data-i18n-html><strong>Kiosk</strong> (full height) — change lane; jumping and sliding won't help.</li>
+            <li data-i18n-html><strong>Tokens</strong> — score bonus; high tokens need a jump.</li>
             <li>Speed rises with distance. One crash ends the run.</li>
           </ul>
           <button class="btn back" data-back>Back</button>
@@ -206,7 +209,7 @@
               </label>
             </fieldset>
             <!-- Graphics quality: built by js/gfx-panel.js (quality preset #set-quality, overrides, summary) -->
-            <fieldset id="gfx-section"><legend>Graphics</legend></fieldset>
+            <fieldset id="gfx-section" data-i18n-skip><legend>Graphics</legend></fieldset>
             <fieldset>
               <legend>Accessibility &amp; Controls</legend>
               <label><input type="checkbox" id="set-large-text"> Larger text</label>

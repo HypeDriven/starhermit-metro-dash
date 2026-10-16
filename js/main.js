@@ -12,6 +12,7 @@ import {
   unlockAchievement, addLeaderboardEntry, onDocSaved,
 } from './storage.js';
 import { createUI, DEFAULT_BINDINGS } from './ui.js';
+import { T, N, lang, onLanguage } from './lang.js';
 import { createRenderer } from './render.js';
 import { AudioEngine } from './audio.js';
 import { Platform } from './platform.js';
@@ -23,7 +24,8 @@ const achievements = loadAchievements();
 const leaderboard = loadLeaderboard();
 const platform = new Platform();
 platform.consent = !!settings.consent;
-const shT = shStrings(navigator.languages || [navigator.language]);
+// StarHermit account strings in the game's current language.
+const shT = () => shStrings([lang()]);
 
 // --- cloud mirror (hosted only; localStorage stays the offline cache) ------------
 
@@ -45,24 +47,39 @@ onDocSaved((key) => {
   if (key === 'settings') platform.pushSettings(settings); // per-player settings KV (changed keys only)
 });
 
-/** Remote-preferred load: overwrite the local docs with the cloud mirror. */
+/**
+ * Merge the cloud mirror into the local docs — at boot and after a save
+ * conflict (another device saved first). Neither side is dropped: completed
+ * stages/lessons/challenges and daily days are united keeping the better
+ * score, totals take the larger value, achievements keep the earliest unlock,
+ * and leaderboard runs are united (deduplicated by session). Settings stay
+ * this device's (the per-player settings KV syncs them).
+ */
 function applyCloudDoc(doc) {
   if (!doc || typeof doc !== 'object') return false;
-  const stores = [
-    [settings, doc.settings], [progression, doc.progression],
-    [achievements, doc.achievements], [leaderboard, doc.leaderboard],
-  ];
   let applied = false;
-  for (const [store, remote] of stores) {
-    if (!remote || typeof remote !== 'object') continue;
-    for (const k of Object.keys(store)) delete store[k];
-    Object.assign(store, structuredClone(remote));
+  if (doc.progression && typeof doc.progression === 'object') {
+    mergeProgression(progression, doc.progression);
+    applied = true;
+  }
+  if (doc.achievements && typeof doc.achievements === 'object') {
+    const mine = achievements.unlocked || (achievements.unlocked = {});
+    for (const [k, v] of Object.entries(doc.achievements.unlocked || {})) {
+      if (mine[k] == null || (typeof v === 'number' && typeof mine[k] === 'number' && v < mine[k])) mine[k] = v;
+    }
+    applied = true;
+  }
+  if (doc.leaderboard && Array.isArray(doc.leaderboard.entries)) {
+    const key = (e) => e.sessionId || `${e.mode}|${e.day}|${e.score}|${e.when}`;
+    const seen = new Set(leaderboard.entries.map(key));
+    for (const e of doc.leaderboard.entries) {
+      if (!seen.has(key(e))) { seen.add(key(e)); addLeaderboardEntry(leaderboard, structuredClone(e)); }
+    }
     applied = true;
   }
   if (!applied) return false;
   applyingRemoteDoc = true;
   try {
-    saveSettings(settings);
     saveProgression(progression);
     saveAchievements(achievements);
     saveLeaderboard(leaderboard);
@@ -71,6 +88,30 @@ function applyCloudDoc(doc) {
   }
   return true;
 }
+
+function mergeProgression(local, remote) {
+  const better = (a, b) => (!a ? b : !b ? a : (b.score || 0) > (a.score || 0) ? b : a);
+  for (const field of ['journeyCompleted', 'challengesCompleted']) {
+    local[field] = local[field] || {};
+    for (const [id, v] of Object.entries(remote[field] || {})) local[field][id] = better(local[field][id], v);
+  }
+  local.lessonsCompleted = { ...(remote.lessonsCompleted || {}), ...(local.lessonsCompleted || {}) };
+  local.totalDistance = Math.max(Number(local.totalDistance) || 0, Number(remote.totalDistance) || 0);
+  local.totalRuns = Math.max(Number(local.totalRuns) || 0, Number(remote.totalRuns) || 0);
+  local.dailyDays = [...new Set([...(local.dailyDays || []), ...(remote.dailyDays || [])])].sort();
+  local.bestDaily = local.bestDaily || {};
+  for (const [day, sc] of Object.entries(remote.bestDaily || {})) local.bestDaily[day] = Math.max(Number(local.bestDaily[day]) || 0, Number(sc) || 0);
+}
+
+// Another device saved first: merge its cloud mirror into ours, keep any run
+// in progress, and save the merge (platform.js reloads and re-saves).
+platform.onConflict = (doc) => {
+  if (applyCloudDoc(doc) && ui) {
+    ui.refreshTitle(progression);
+    if (ui.currentScreen === 'journey') ui.buildJourneyGrid(progression);
+    if (ui.currentScreen === 'scores') ui.renderScores(leaderboard);
+  }
+};
 
 const audio = new AudioEngine(settings);
 const $ = (id) => document.getElementById(id);
@@ -106,8 +147,9 @@ function renderSyncChip() {
   const chip = $('sync-chip');
   if (!platform.hosted) { chip.hidden = true; return; }
   chip.hidden = false;
-  chip.textContent = { saving: 'Syncing…', synced: 'Cloud synced', offline: 'Cloud offline' }[platform.syncState] || platform.syncState;
-  chip.title = 'Cloud save status';
+  const text = { saving: N('Syncing…'), synced: N('Cloud synced'), offline: N('Cloud offline') }[platform.syncState];
+  chip.textContent = text ? T(text) : platform.syncState;
+  chip.title = T('Cloud save status');
 }
 
 // --- achievements ---------------------------------------------------------------
@@ -176,7 +218,7 @@ function beginCountdown() {
       audio.event('countdown');
     } else {
       clearInterval(timer);
-      ui.countdown('GO');
+      ui.countdown(T('GO'));
       audio.event('go');
       audio.startMusic();
       setTimeout(() => ui.countdown(null), 500);
@@ -190,12 +232,12 @@ function handleEvents(events, state) {
   for (const e of events) {
     audio.event(e.type);
     if (e.type === 'invalid') {
-      ui.announce(`Can't do that: ${e.reason}`);
+      ui.announce(T('Can’t do that: {reason}', { reason: e.reason }));
     } else if (e.type === 'crash') {
-      ui.announce('Crash!');
+      ui.announce(T('Crash!'));
       if (navigator.vibrate && !settings.reducedMotion) navigator.vibrate(80);
     } else if (e.type === 'goal') {
-      ui.announce('Objective complete!');
+      ui.announce(T('Objective complete!'));
     }
   }
   void state;
@@ -247,7 +289,7 @@ function handleRunEnd(result, envelope, state) {
     bestScore = scopeEntries.length ? Math.max(...scopeEntries.map((e) => e.score)) : null;
     isBest = bestScore === null || result.score > bestScore;
     addLeaderboardEntry(leaderboard, {
-      name: platform.nickname || 'You', mine: true,
+      name: platform.nickname || T('You'), mine: true,
       score: result.score, distance: result.distance, ticks: result.tick,
       invalid: result.stats.invalidActions, mode: content.kind, day: dailyDay,
       seed: content.seed, ruleset: 'v1', assists: settings.hints ? 'hints' : 'none',
@@ -263,7 +305,7 @@ function handleRunEnd(result, envelope, state) {
   // daily: submit replay for validation when hosted
   if (content.kind === 'daily') {
     platform.submitDaily(envelope, content.day).then((verdict) => {
-      if (verdict && verdict.ok === false) ui.toast('Daily submission rejected: ' + (verdict.error || 'invalid'));
+      if (verdict && verdict.ok === false) ui.toast(T('Daily submission rejected: {error}', { error: verdict.error || 'invalid' }));
     });
   }
 
@@ -287,12 +329,21 @@ function postToLeaderboard(eligible, score) {
   const seq = ++lbSeq;
   if (!eligible || !platform.hosted) { line.hidden = true; return; }
   line.hidden = false;
-  line.textContent = shT.lbPosting;
+  lbResult = null;
+  renderLeaderboardLine();
   platform.submitScore(score).then((r) => {
     if (seq !== lbSeq) return;
-    line.textContent = !r.posted ? shT.lbNotPosted
-      : r.rank ? shT.lbRank.replace('{rank}', r.rank) : shT.lbPosted;
+    lbResult = r;
+    renderLeaderboardLine();
   });
+}
+let lbResult = null;
+function renderLeaderboardLine() {
+  const line = $('results-lb');
+  if (line.hidden) return;
+  const r = lbResult;
+  line.textContent = !r ? shT().lbPosting : !r.posted ? shT().lbNotPosted
+    : r.rank ? shT().lbRank.replace('{rank}', r.rank) : shT().lbPosted;
 }
 
 function pauseGame() {
@@ -330,7 +381,7 @@ function rewindRun() {
   gameState = 'active';
   session.resume();
   audio.event('rewind');
-  ui.toast('Rewound 5 seconds');
+  ui.toast(T('Rewound 5 seconds'));
 }
 
 // --- content selection -------------------------------------------------------------------
@@ -358,7 +409,7 @@ function doAction(action) {
   if (gameState !== 'active' || !session) return;
   const res = session.command(action);
   if (!res.accepted && res.reason && res.reason !== 'run-over') {
-    ui.announce(`Not now: ${res.reason}`);
+    ui.announce(T('Not now: {reason}', { reason: res.reason }));
   }
 }
 
@@ -501,20 +552,20 @@ function wire() {
     // rebinding UI: persist to the player's StarHermit controls when signed in
     onRebind: () => { platform.saveBindings({ ...DEFAULT_BINDINGS, ...(settings.bindings || {}) }); },
     onResetBindings: () => { platform.resetBindings(); },
-    resetKeysLabel: shT.resetKeys,
+    resetKeysLabel: () => shT().resetKeys,
     getRenderer: () => renderer,
   }, { settings });
 
   // StarHermit account: sign-in (platform host, no token) / invite (signed in)
-  $('btn-signin').textContent = shT.signIn;
-  $('btn-invite').textContent = shT.invite;
+  $('btn-signin').textContent = shT().signIn;
+  $('btn-invite').textContent = shT().invite;
   $('btn-signin').addEventListener('click', () => platform.signIn());
   $('btn-invite').addEventListener('click', () => {
     const link = platform.inviteLink();
     if (!link) return;
     // navigator.clipboard is undefined outside secure contexts: report it instead of throwing
     const clip = navigator.clipboard?.writeText ? navigator.clipboard.writeText(link) : Promise.reject(new Error('clipboard unavailable'));
-    clip.then(() => ui.toast(shT.copied), () => ui.toast(shT.copyFailed));
+    clip.then(() => ui.toast(shT().copied), () => ui.toast(shT().copyFailed));
   });
 
   // title
@@ -602,7 +653,7 @@ function wire() {
 
   // reset data
   $('btn-reset-data').addEventListener('click', () => {
-    if (!confirm('Reset all local progress, scores, and achievements?')) return;
+    if (!confirm(T('Reset all local progress, scores, and achievements?'))) return;
     for (const key of Object.keys(progression)) delete progression[key];
     Object.assign(progression, { journeyCompleted: {}, lessonsCompleted: {}, challengesCompleted: {}, totalDistance: 0, totalRuns: 0, dailyDays: [], bestDaily: {} });
     achievements.unlocked = {};
@@ -611,7 +662,7 @@ function wire() {
     saveAchievements(achievements);
     saveLeaderboard(leaderboard);
     ui.refreshTitle(progression);
-    ui.toast('Local progress reset');
+    ui.toast(T('Local progress reset'));
   });
 
   // unlock audio on first gesture anywhere
@@ -631,7 +682,7 @@ function wire() {
       audio.resume();
       if (gameState === 'paused' && session && autoPaused) {
         autoPaused = false;
-        ui.showInterrupt('Your run was paused while you were away. State is restored exactly as you left it.');
+        ui.showInterrupt(() => T('Your run was paused while you were away. State is restored exactly as you left it.'));
       }
     }
   });
@@ -639,6 +690,18 @@ function wire() {
   window.addEventListener('resize', () => renderer && renderer.resize());
   window.addEventListener('orientationchange', () => setTimeout(() => renderer && renderer.resize(), 60));
   ui.bindSettingsInputs();
+
+  // Settings → Language: js/i18n.js re-translates the markup and fires md-language;
+  // everything built in code follows without touching the run.
+  onLanguage(() => {
+    $('btn-signin').textContent = shT().signIn;
+    $('btn-invite').textContent = shT().invite;
+    if (!platform.nickname) $('profile-chip').textContent = T('Guest');
+    renderSyncChip();
+    renderLeaderboardLine();
+    ui.relabel(progression, leaderboard);
+    if (session && lastContent && (gameState === 'active' || gameState === 'paused')) ui.updateHUD(lastContent, session.state, totalScore(session.state));
+  });
   // live cost summary / pixel size while the Settings screen is open
   setInterval(() => { if (ui.currentScreen === 'settings') ui.refreshGraphics(); }, 700);
 }
@@ -647,6 +710,7 @@ function wire() {
 
 async function boot() {
   const remoteDoc = await platform.init();
+  $('profile-chip').textContent = T('Guest');
 
   // identity + sync status (hosted only; offline stays "Guest" with no chip)
   if (platform.nickname) $('profile-chip').textContent = platform.nickname;
@@ -660,8 +724,8 @@ async function boot() {
     refreshAccountButtons();
     renderSyncChip();
     if (!a.signedIn) {
-      $('profile-chip').textContent = 'Guest';
-      ui.toast(shT.signedOut); // keep playing locally
+      $('profile-chip').textContent = T('Guest');
+      ui.toast(shT().signedOut); // keep playing locally
     }
   });
 
@@ -686,11 +750,12 @@ async function boot() {
   ui.showScreen('title');
   ui.buildHelp();
 
-  // remote-preferred cloud load landed during init: adopt it before records render
+  // the cloud mirror loaded during init: merge it with local progress before
+  // records render, and write the merge back (conditional on the version read)
   if (applyCloudDoc(remoteDoc)) {
-    applySettingsEffects();
     ui.refreshTitle(progression);
     ui.buildHelp();
+    platform.scheduleCloudSave();
   }
   if (platform.hosted) {
     // settings KV wins over the local / cloud copy, key by key; key bindings
@@ -721,7 +786,8 @@ async function boot() {
       lastContent = content;
       session.pause();
       gameState = 'paused';
-      ui.showInterrupt(`You have an interrupted ${content.kind} run at ${Math.floor(restored.state.distance)} units. Pick up exactly where you left off.`);
+      const dist = Math.floor(restored.state.distance);
+      ui.showInterrupt(() => T('You have an interrupted run at {n} units. Pick up exactly where you left off.', { n: dist }));
       break;
     }
   }
@@ -751,5 +817,6 @@ function resumeCandidates() {
 
 boot().catch((err) => {
   console.error(err);
-  document.body.innerHTML = '<main style="padding:2rem"><h1>Metro Dash</h1><p>Something went wrong while starting the game. Your saved progress is untouched — please reload.</p></main>';
+  document.body.innerHTML = '<main style="padding:2rem"><h1>Metro Dash</h1><p></p></main>';
+  document.querySelector('main p').textContent = T('Something went wrong while starting the game. Your saved progress is untouched — please reload.');
 });

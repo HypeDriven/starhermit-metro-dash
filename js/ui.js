@@ -7,6 +7,24 @@ import {
 } from './content.js';
 import { TICKS_PER_SECOND, speedAt } from './rules.js';
 import { createGraphicsPanel } from './gfx-panel.js';
+import { T, N, lang } from './lang.js';
+
+const MODE_NAMES = { daily: N('Daily'), journey: N('Journey'), learn: N('Lesson'), practice: N('Practice'), challenge: N('Challenge') };
+const ACTION_NAMES = { left: N('Left'), right: N('Right'), jump: N('Jump'), slide: N('Slide'), pause: N('Pause') };
+const ACTION_WORDS = { left: N('left'), right: N('right'), jump: N('jump'), slide: N('slide'), wait: N('wait') };
+const PRACTICE_LEVELS = { relaxed: N('Relaxed'), standard: N('Standard'), intense: N('Intense') };
+
+/** Display title of a content item (labels in content.js are English keys). */
+export function contentLabel(content) {
+  if (!content) return '';
+  if (content.kind === 'journey') return content.mastery ? T('Stage {n} — Mastery', { n: content.index }) : T('Stage {n}', { n: content.index });
+  if (content.kind === 'daily') return T('Daily Run — {day}', { day: content.day });
+  if (content.kind === 'practice') {
+    const level = String(content.id || '').replace(/^practice-/, '');
+    return T('Practice — {level}', { level: T(PRACTICE_LEVELS[level] || PRACTICE_LEVELS.standard) });
+  }
+  return T(content.label);
+}
 
 export const DEFAULT_BINDINGS = {
   left: ['ArrowLeft', 'KeyA'],
@@ -53,7 +71,7 @@ export function createUI(handlers, stores) {
   }
 
   function fmtScore(n) {
-    return Math.floor(n).toLocaleString('en-US');
+    return Math.floor(n).toLocaleString(lang()); // digit grouping follows the game language
   }
 
   // --- screen router -------------------------------------------------------------
@@ -86,10 +104,11 @@ export function createUI(handlers, stores) {
   function refreshTitle(progression) {
     const done = Object.keys(progression.journeyCompleted).length;
     const daily = dailyInfo();
-    $('btn-play').textContent = `Play Daily Run — ${daily.day}`;
-    $('title-progress').textContent =
-      `Journey ${done}/${JOURNEY_STAGES.length} · Lessons ${Object.keys(progression.lessonsCompleted).length}/${LESSONS.length}` +
-      ` · Total distance ${fmtScore(progression.totalDistance)}`;
+    $('btn-play').textContent = T('Play Daily Run — {day}', { day: daily.day });
+    $('title-progress').textContent = T('Journey {done}/{stages} · Lessons {lessons}/{lessonTotal} · Total distance {distance}', {
+      done, stages: JOURNEY_STAGES.length, lessons: Object.keys(progression.lessonsCompleted).length, lessonTotal: LESSONS.length,
+      distance: fmtScore(progression.totalDistance),
+    });
   }
 
   // --- journey grid -----------------------------------------------------------------
@@ -114,8 +133,8 @@ export function createUI(handlers, stores) {
         stars.textContent = done.score >= stage.par.score ? '★★★' : done.score >= stage.par.score * 0.66 ? '★★' : '★';
         btn.appendChild(stars);
       }
-      btn.setAttribute('aria-label',
-        `Stage ${i + 1}${stage.mastery ? ', mastery' : ''}${done ? ', completed' : ''}${unlocked ? '' : ', locked'}`);
+      btn.setAttribute('aria-label', [T('Stage {n}', { n: i + 1 }), stage.mastery ? T('mastery') : '', done ? T('completed') : '', unlocked ? '' : T('locked')]
+        .filter(Boolean).join(', '));
       if (unlocked) btn.addEventListener('click', () => handlers.onSelectContent(stage));
       grid.appendChild(btn);
     });
@@ -134,16 +153,16 @@ export function createUI(handlers, stores) {
       btn.setAttribute('role', 'listitem');
       btn.innerHTML = '';
       const title = document.createElement('strong');
-      title.textContent = lesson.label;
+      title.textContent = T(lesson.label);
       btn.appendChild(title);
       if (done) {
         const mark = document.createElement('span');
         mark.className = 'done-mark';
-        mark.textContent = '✓ done';
+        mark.textContent = '✓ ' + T('done');
         btn.appendChild(mark);
       }
       const small = document.createElement('small');
-      small.textContent = lesson.briefing;
+      small.textContent = T(lesson.briefing);
       btn.appendChild(small);
       btn.addEventListener('click', () => handlers.onSelectContent(lesson));
       list.appendChild(btn);
@@ -159,7 +178,7 @@ export function createUI(handlers, stores) {
       btn.className = 'card';
       btn.setAttribute('role', 'listitem');
       const title = document.createElement('strong');
-      title.textContent = ch.label;
+      title.textContent = T(ch.label);
       btn.appendChild(title);
       if (done) {
         const mark = document.createElement('span');
@@ -168,7 +187,7 @@ export function createUI(handlers, stores) {
         btn.appendChild(mark);
       }
       const small = document.createElement('small');
-      small.textContent = ch.briefing;
+      small.textContent = T(ch.briefing);
       btn.appendChild(small);
       btn.addEventListener('click', () => handlers.onSelectContent(ch));
       list.appendChild(btn);
@@ -178,27 +197,35 @@ export function createUI(handlers, stores) {
   // --- setup / briefing ---------------------------------------------------------------
 
   function showSetup(content) {
-    $('setup-h').textContent = content.label;
+    setupContent = content;
+    renderSetup();
+    showScreen('setup');
+  }
+  let setupContent = null;
+  function renderSetup() {
+    const content = setupContent;
+    if (!content) return;
+    $('setup-h').textContent = contentLabel(content);
     const facts = $('setup-facts');
     facts.textContent = '';
     const goal = content.config.goal;
     const rows = [
-      ['Mode', content.kind],
-      ['Objective', goal
-        ? goal.type === 'distance' ? `Reach ${fmtScore(goal.value)} units`
-        : goal.type === 'coins' ? `Collect ${goal.value} tokens`
-        : `Perform ${goal.value}× ${goal.action}`
-        : 'Endless — survive and score'],
-      ['Speed', `${Math.round((content.config.speedScale || 1) * 100)}%`],
-      ['Expected', goal ? `~${Math.max(1, Math.round((content.par?.ticks || 1200) / TICKS_PER_SECOND / 60))} min` : '1–5 min'],
-      ['Players', '1'],
-      ['Ranked', content.kind === 'daily' ? 'Yes (daily board)' : content.kind === 'practice' ? 'No' : 'Local board'],
+      [T('Mode'), T(MODE_NAMES[content.kind] || content.kind)],
+      [T('Objective'), goal
+        ? goal.type === 'distance' ? T('Reach {n} units', { n: fmtScore(goal.value) })
+        : goal.type === 'coins' ? T('Collect {n} tokens', { n: goal.value })
+        : T('Perform {n}× {action}', { n: goal.value, action: T(ACTION_WORDS[goal.action] || goal.action) })
+        : T('Endless — survive and score')],
+      [T('Speed'), `${Math.round((content.config.speedScale || 1) * 100)}%`],
+      [T('Expected'), goal ? T('~{n} min', { n: Math.max(1, Math.round((content.par?.ticks || 1200) / TICKS_PER_SECOND / 60)) }) : T('1–5 min')],
+      [T('Players'), '1'],
+      [T('Ranked'), content.kind === 'daily' ? T('Yes (daily board)') : content.kind === 'practice' ? T('No') : T('Local board')],
     ];
-    if (content.config.movesLimit) rows.push(['Move budget', String(content.config.movesLimit)]);
+    if (content.config.movesLimit) rows.push([T('Move budget'), String(content.config.movesLimit)]);
     if (content.config.allowedActions && content.config.allowedActions.length < 5) {
-      rows.push(['Allowed moves', content.config.allowedActions.filter((a) => a !== 'wait').join(', ')]);
+      rows.push([T('Allowed moves'), content.config.allowedActions.filter((a) => a !== 'wait').map((a) => T(ACTION_WORDS[a] || a)).join(', ')]);
     }
-    if (content.introduces && content.introduces.length) rows.push(['New mechanic', content.introduces.join(', ')]);
+    if (content.introduces && content.introduces.length) rows.push([T('New mechanic'), content.introduces.map((m) => T(m)).join(', ')]);
     for (const [k, v] of rows) {
       const dt = document.createElement('dt');
       dt.textContent = k;
@@ -206,8 +233,7 @@ export function createUI(handlers, stores) {
       dd.textContent = v;
       facts.append(dt, dd);
     }
-    $('setup-briefing').textContent = content.briefing || '';
-    showScreen('setup');
+    $('setup-briefing').textContent = content.briefing ? T(content.briefing) : '';
   }
 
   // --- HUD -------------------------------------------------------------------------
@@ -216,10 +242,10 @@ export function createUI(handlers, stores) {
 
   function objectiveText(content, state) {
     const goal = content.config.goal;
-    if (!goal) return 'Survive. Score big.';
-    if (goal.type === 'distance') return `Reach ${fmtScore(goal.value)} units — ${fmtScore(Math.min(state.distance, goal.value))} so far`;
-    if (goal.type === 'coins') return `Collect ${goal.value} tokens — ${state.stats.coins} so far`;
-    return `Perform ${goal.value}× ${goal.action} — ${state.stats[goal.action + 's'] || 0} so far`;
+    if (!goal) return T('Survive. Score big.');
+    if (goal.type === 'distance') return T('Reach {n} units — {done} so far', { n: fmtScore(goal.value), done: fmtScore(Math.min(state.distance, goal.value)) });
+    if (goal.type === 'coins') return T('Collect {n} tokens — {done} so far', { n: goal.value, done: state.stats.coins });
+    return T('Perform {n}× {action} — {done} so far', { n: goal.value, action: T(ACTION_WORDS[goal.action] || goal.action), done: state.stats[goal.action + 's'] || 0 });
   }
 
   function objectiveProgress(content, state) {
@@ -243,36 +269,46 @@ export function createUI(handlers, stores) {
     const moves = $('hud-moves');
     if (state.movesLeft !== null) {
       moves.hidden = false;
-      moves.textContent = `Moves left: ${state.movesLeft}`;
+      moves.textContent = T('Moves left: {n}', { n: state.movesLeft });
     } else {
       moves.hidden = true;
     }
     // throttled score announcements for screen readers
     if (Math.floor(total / 250) !== Math.floor(lastAnnouncedScore / 250)) {
-      announce(`Score ${fmtScore(total)}`);
+      announce(T('Score {n}', { n: fmtScore(total) }));
     }
     lastAnnouncedScore = total;
   }
 
   // --- results -------------------------------------------------------------------------
 
+  let lastResults = null;
   function showResults(result, context) {
+    lastResults = { result, context };
+    renderResults();
+    showScreen('results');
+    announce($('results-h').textContent + '. ' + $('results-headline').textContent);
+  }
+  // Results text only; re-rendered in place on a language change.
+  function renderResults() {
+    if (!lastResults) return;
+    const { result, context } = lastResults;
     const { isBest, newAchievements, content } = context;
     $('results-h').textContent =
-      result.reason === 'goal' ? 'Stage Complete' :
-      result.reason === 'moves' ? 'Out of Moves' :
-      result.reason === 'quit' ? 'Run Ended' : 'Run Over';
-    const crashNames = { barrier: 'barrier', sign: 'sign', block: 'kiosk' };
+      result.reason === 'goal' ? T('Stage Complete') :
+      result.reason === 'moves' ? T('Out of Moves') :
+      result.reason === 'quit' ? T('Run Ended') : T('Run Over');
+    const crashNames = { barrier: N('barrier'), sign: N('sign'), block: N('kiosk') };
     $('results-headline').textContent =
-      result.reason === 'goal' ? `Objective complete — ${fmtScore(result.score)} points`
-      : result.reason === 'crash' ? `Crushed it until the ${crashNames[result.crashedKind] || 'track'} fought back — ${fmtScore(result.score)} points`
-      : `${fmtScore(result.score)} points`;
+      result.reason === 'goal' ? T('Objective complete — {n} points', { n: fmtScore(result.score) })
+      : result.reason === 'crash' ? T('Crushed it until the {obstacle} fought back — {n} points', { obstacle: T(crashNames[result.crashedKind] || N('track')), n: fmtScore(result.score) })
+      : T('{n} points', { n: fmtScore(result.score) });
     const tbody = $('results-table').querySelector('tbody');
     tbody.textContent = '';
     const rows = [
-      ['Distance', result.components.distance, `${fmtScore(result.distance)} units`],
-      ['Clean dodges', result.components.dodge, ''],
-      ['Tokens', result.components.collect, `${result.stats.coins} collected`],
+      [T('Distance'), result.components.distance, T('{n} units', { n: fmtScore(result.distance) })],
+      [T('Clean dodges'), result.components.dodge, ''],
+      [T('Tokens'), result.components.collect, T('{n} collected', { n: result.stats.coins })],
     ];
     for (const [label, pts, note] of rows) {
       const tr = document.createElement('tr');
@@ -286,14 +322,12 @@ export function createUI(handlers, stores) {
     }
     $('results-total').textContent = fmtScore(result.score);
     $('results-comparison').textContent = isBest
-      ? 'New personal best for this board!'
-      : context.bestScore != null ? `Personal best: ${fmtScore(context.bestScore)}` : '';
+      ? T('New personal best for this board!')
+      : context.bestScore != null ? T('Personal best: {n}', { n: fmtScore(context.bestScore) }) : '';
     $('results-achievements').textContent = newAchievements.length
-      ? 'Achievements: ' + newAchievements.map((k) => ACHIEVEMENTS.find((a) => a.key === k)?.label || k).join(' · ')
+      ? T('Achievements: {names}', { names: newAchievements.map((k) => T(ACHIEVEMENTS.find((a) => a.key === k)?.label || k)).join(' · ') })
       : '';
     $('btn-next').hidden = !context.nextContent;
-    showScreen('results');
-    announce($('results-h').textContent + '. ' + $('results-headline').textContent);
     void content;
   }
 
@@ -309,7 +343,7 @@ export function createUI(handlers, stores) {
     entries.sort((a, b) => b.score - a.score);
     entries.slice(0, 50).forEach((e, i) => {
       const tr = document.createElement('tr');
-      for (const val of [i + 1, fmtScore(e.score), e.mode + (e.day ? ' ' + e.day : ''), fmtScore(e.distance), new Date(e.when).toLocaleDateString()]) {
+      for (const val of [i + 1, fmtScore(e.score), T(MODE_NAMES[e.mode] || e.mode) + (e.day ? ' ' + e.day : ''), fmtScore(e.distance), new Date(e.when).toLocaleDateString(lang())]) {
         const td = document.createElement('td');
         td.textContent = String(val);
         tr.appendChild(td);
@@ -321,7 +355,7 @@ export function createUI(handlers, stores) {
       const tr = document.createElement('tr');
       const td = document.createElement('td');
       td.colSpan = 5;
-      td.textContent = 'No runs yet. Go play!';
+      td.textContent = T('No runs yet. Go play!');
       tr.appendChild(td);
       tbody.appendChild(tr);
     }
@@ -338,11 +372,11 @@ export function createUI(handlers, stores) {
     const cards = $('help-cards');
     cards.textContent = '';
     const items = [
-      ['Move left', bindingLabel('left'), 'Also: swipe left, tap ◀, or gamepad D-pad'],
-      ['Move right', bindingLabel('right'), 'Also: swipe right, tap ▶, or gamepad D-pad'],
-      ['Jump', bindingLabel('jump'), 'Also: swipe up, tap ▲, or gamepad A'],
-      ['Slide', bindingLabel('slide'), 'Also: swipe down, tap ▼, or gamepad B'],
-      ['Pause', bindingLabel('pause'), 'Resume is always the first option'],
+      [T('Move left'), bindingLabel('left'), T('Also: swipe left, tap ◀, or gamepad D-pad')],
+      [T('Move right'), bindingLabel('right'), T('Also: swipe right, tap ▶, or gamepad D-pad')],
+      [T('Jump'), bindingLabel('jump'), T('Also: swipe up, tap ▲, or gamepad A')],
+      [T('Slide'), bindingLabel('slide'), T('Also: swipe down, tap ▼, or gamepad B')],
+      [T('Pause'), bindingLabel('pause'), T('Resume is always the first option')],
     ];
     for (const [name, keys, alt] of items) {
       const div = document.createElement('div');
@@ -383,11 +417,11 @@ export function createUI(handlers, stores) {
       const row = document.createElement('div');
       row.className = 'binding-row';
       const label = document.createElement('span');
-      label.textContent = action[0].toUpperCase() + action.slice(1);
+      label.textContent = T(ACTION_NAMES[action]);
       const btn = document.createElement('button');
       btn.className = 'btn small';
-      btn.textContent = rebindingAction === action ? 'Press a key…' : bindingLabel(action);
-      btn.setAttribute('aria-label', `Remap ${action}`);
+      btn.textContent = rebindingAction === action ? T('Press a key…') : bindingLabel(action);
+      btn.setAttribute('aria-label', T('Remap {action}', { action: T(ACTION_NAMES[action]) }));
       btn.addEventListener('click', () => {
         rebindingAction = action;
         buildBindings();
@@ -398,7 +432,7 @@ export function createUI(handlers, stores) {
     const reset = document.createElement('button');
     reset.className = 'btn small';
     reset.id = 'btn-reset-bindings';
-    reset.textContent = handlers.resetKeysLabel || 'Reset keys';
+    reset.textContent = (handlers.resetKeysLabel && handlers.resetKeysLabel()) || T('Reset keys');
     reset.addEventListener('click', () => {
       settings.bindings = null;
       rebindingAction = null;
@@ -465,9 +499,12 @@ export function createUI(handlers, stores) {
     }
   }
 
+  // summary may be a thunk so it follows a language change.
+  let interruptSummary = null;
   function showInterrupt(summary) {
+    interruptSummary = summary;
     $('overlay-interrupt').hidden = false;
-    $('interrupt-summary').textContent = summary;
+    $('interrupt-summary').textContent = typeof summary === 'function' ? summary() : summary;
     $('btn-interrupt-resume').focus();
   }
 
@@ -486,6 +523,22 @@ export function createUI(handlers, stores) {
     announce(text);
   }
 
+  /* Settings → Language: js/i18n.js re-translated the static markup; rebuild
+     everything built here (screens re-render in place, the run keeps going). */
+  function relabel(progression, leaderboard) {
+    gfxPanel.relabel();
+    refreshTitle(progression);
+    buildHelp();
+    if (currentScreen === 'journey') buildJourneyGrid(progression);
+    if (currentScreen === 'learn') buildLessonList(progression);
+    if (currentScreen === 'challenge') buildChallengeList(progression);
+    if (currentScreen === 'setup') renderSetup();
+    if (currentScreen === 'results') renderResults();
+    if (currentScreen === 'scores') renderScores(leaderboard);
+    if (currentScreen === 'settings') buildBindings();
+    if (!$('overlay-interrupt').hidden && interruptSummary) $('interrupt-summary').textContent = typeof interruptSummary === 'function' ? interruptSummary() : interruptSummary;
+  }
+
   function applyA11yClasses() {
     document.body.classList.toggle('reduced-motion', settings.reducedMotion);
     document.body.classList.toggle('high-contrast', settings.highContrast);
@@ -500,6 +553,7 @@ export function createUI(handlers, stores) {
     refreshTitle, buildJourneyGrid, buildLessonList, buildChallengeList,
     renderScores, buildHelp, fillSettings, bindSettingsInputs, handleRebind,
     refreshGraphics: () => gfxPanel.refresh(),
+    relabel,
     applyA11yClasses,
     setScoreFilter(f) { scoreFilter = f; },
     get currentScreen() { return currentScreen; },

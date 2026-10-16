@@ -4,12 +4,17 @@
 //   strips it, renews it and signs out when renewal is refused
 // - account nickname via the profile route (never /api/v1/me, never usernames)
 // - cloud save: the game:<slug> slot, 2 s debounce + keepalive flush on
-//   pagehide / hidden tab, remote-preferred load; localStorage stays the cache
+//   pagehide / hidden tab; main.js merges the loaded mirror with local docs.
+//   Writes after a load are conditional (ETag): when another device saved
+//   first the SDK emits 'saveconflict' and the mirror is reloaded, merged
+//   (onConflict) and saved again; localStorage stays the cache
 // - settings KV mirror (changed keys only) and key bindings via controls
 // - sign-in button / invite link
 // - daily replay validation, server time, presence/activity/telemetry target
 //   this game's own server.js on localhost only (the platform has no such
 //   per-game routes, so they are never requested on StarHermit)
+
+import { T } from './lang.js';
 
 const SAVE_DEBOUNCE_MS = 2000;
 const SETTINGS_DEBOUNCE_MS = 1500;
@@ -27,6 +32,7 @@ export class Platform {
     this.funnel = [];
     this.syncState = 'offline'; // 'saving' | 'synced' | 'offline'
     this.getCloudDoc = null; // set by main.js: () => mirror doc
+    this.onConflict = null; // set by main.js: (remoteDoc) => merge into the local docs
     this._presenceTimer = null;
     this._syncListeners = new Set();
     this._authListeners = new Set();
@@ -34,6 +40,7 @@ export class Platform {
     this._pendingPatch = null;
     this._settingsTimer = null;
     this.sh.on('saved', (ok) => this._setSync(ok ? 'synced' : 'offline'));
+    this.sh.on('saveconflict', () => { this.resolveConflict(); });
     this.sh.on('auth', (a) => {
       if (!a.signedIn) { this.nickname = null; this._setSync('offline'); }
       for (const fn of this._authListeners) {
@@ -50,11 +57,20 @@ export class Platform {
     if (!this.hosted) return null;
     if (this.devServer) await this._syncTime();
     const p = await this.sh.profile();
-    this.nickname = p ? p.displayName : 'Player ' + String(this.userId).slice(0, 6);
+    this.nickname = p ? p.displayName : T('Player {id}', { id: String(this.userId).slice(0, 6) });
     this._setSync('saving');
     const doc = await this.sh.loadJSON();
     this._setSync('synced');
-    return doc; // main.js applies it (remote-preferred), null = none/unreachable
+    return doc; // main.js merges it into the local docs, null = none/unreachable
+  }
+
+  /** Another device saved since our last load: reload, merge (onConflict), save the merge. */
+  async resolveConflict() {
+    if (!this.hosted) return;
+    this._setSync('saving');
+    const doc = await this.sh.loadJSON();
+    if (doc && this.onConflict) this.onConflict(doc);
+    if (!this.sh.saveConflicted() && this.getCloudDoc) this.sh.saveJSON(this.getCloudDoc(), 0);
   }
 
   now() {

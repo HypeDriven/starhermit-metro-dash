@@ -1,5 +1,5 @@
-// Localized strings for the Graphics settings section (the rest of the game is
-// English-only; see spec §10). Locale comes from navigator.languages.
+// Localized strings for the Graphics settings section, looked up in the game
+// language (js/i18n.js, Settings → Language; see spec §10).
 
 const EN = {
   legend: 'Graphics',
