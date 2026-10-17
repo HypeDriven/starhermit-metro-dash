@@ -33,7 +33,8 @@ jump, or slide — one tick at a time.
 | `js/content.js` | Themes, 5 lessons, 40 journey stages, 6 challenges, daily derivation, achievements, reference bot, content validator. |
 | `js/session.js` | One run: fixed-step accumulator, command queue, replay log, periodic hashes, pause/snapshot/restore. |
 | `js/render.js` | Three.js scene (sky dome, city, lamps, obstacle pools, particles, day cycle, fitted sun shadows, spring camera), graphics settings, adaptive resolution + 2D fallback with the same interface. |
-| `js/gfx.js` | Pure graphics quality model: presets, categories, GPU detection, `resolve()`, `presetTier()`, `describe()`. |
+| `js/gpu-level.js` | Shared StarHermit hardware-level module (`window.StarHermitGpu`, loaded before the game modules), copied from the platform tools, never edited here. |
+| `js/gfx.js` | Pure graphics quality model: presets, categories, hardware-level detection (`detectLevel`, `presetForLevel`, `detectPreset`), per-preset `BUDGETS`/`budgetFor`, `resolve()`, `presetTier()`, `describe()`. |
 | `js/fx.js` | Lazily loaded post chain (RenderPass → GTAO → UnrealBloom → OutputPass → grade → SMAA/FXAA) and RoomEnvironment IBL. |
 | `js/gfx-panel.js` | Settings → Graphics section: builds the controls, persists `settings.graphics`, live cost summary. |
 | `js/gfx-strings.js` | Graphics section strings in the nine locales, looked up in the game language. |
@@ -51,7 +52,7 @@ jump, or slide — one tick at a time.
 | `score-script.js` | StarHermit platform script (`server=`): range-checks a finished run's score and posts it to the `high-score` leaderboard (canonical copy in the games repo's `tools/score-script.js`). |
 | `server.js` | Local dev server: static serving + `/api/v1/*`, replay-validated daily board. |
 | `tests/rules.test.mjs` | `npm test` — rules, determinism, replay, serialization, content validation. |
-| `tests/gfx.test.mjs` | `npm test` (`node --test`) — GPU detection, preset/override/scale resolution, preset clears overrides, locale coverage. |
+| `tests/gfx.test.mjs` | `npm test` (`node --test`) — hardware level → preset (incl. phone cap), per-preset budget table, preset/override/scale resolution, preset clears overrides, locale coverage. |
 | `tests/platform.test.mjs` | `npm test` (`node --test`) — StarHermit adapter over the real SDK with a stubbed, ETag-versioned fetch: token, nickname, `game:<slug>` cloud save, settings KV, controls save/load/reset, invite, zero fetches standalone, sign-in on a `<uuid>.starhermit.com` host, a 412 save conflict reloaded/merged/re-saved. |
 | `tests/i18n.test.mjs` | `npm test` (`node --test`) — every key used in markup and code exists in all nine locales, content texts, live switching, Graphics/account strings. |
 | `tests/e2e.mjs` | `npm run test:e2e` — real-UI playthrough in headless Chrome, desktop + mobile. |
@@ -406,16 +407,15 @@ highlights, bluer at night, lifted blacks) with a vignette, and FXAA/SMAA/MSAA. 
 obstacle's silhouette or colour, and HUD/UI contrast is untouched.
 
 The Settings screen's **Graphics** section (built by `js/gfx-panel.js`, strings in all nine locales) offers:
-**Quality** (`#set-quality`: Auto (detected: …), Low, Balanced, High, Ultra — Auto is chosen from the WebGL
-unmasked renderer string: software renderers get Low, discrete GPUs and Apple M-series High, everything else
-Balanced, and touch/mobile devices are capped at Balanced); **Render scale** 50–200 % (`#gfx-scale`,
+**Quality** (`#set-quality`: Auto (detected: …), Low, Balanced, High, Ultra — Auto is chosen from the StarHermit
+hardware level, below); **Render scale** 50–200 % (`#gfx-scale`,
 multiplies the preset's scale); one select per effect (`#gfx-<category>`, default "From preset (…)") for
 shadows off/low/medium/high (1024²/2048²/4096²), ambient occlusion off/on/high, bloom, colour grade,
-anti-aliasing off/FXAA/SMAA/MSAA, reflections, particles low/high (burst cap 400/4 000 plus ambient motes)
-and city detail plain/detailed (10/24 buildings per side plus the detailed extras above); **Adaptive
+anti-aliasing off/FXAA/SMAA/MSAA, reflections, particles low/high (burst cap 400 / the preset's spark budget, plus ambient motes)
+and city detail plain/detailed (10 buildings per side / the preset's tower budget, plus the detailed extras above); **Adaptive
 resolution** (default on: every ~90 frames, an average over 26 ms steps the resolution down by 0.1 to a
 floor of 0.6, under 14 ms steps it back up by 0.05); **Show frame rate** (a bottom-left readout, below the
-objective rail in portrait, never interactive); and a summary line "GPU · preset · cost · W×H px". Choosing a
+objective rail in portrait, never interactive); and a summary line "GPU · Level N · preset · cost · W×H px" ("Level" localized). Choosing a
 preset clears the overrides. Changes apply immediately (shadow maps, materials, city density, post chain,
 pixel ratio) and persist in `settings.graphics` inside the `metro-dash:settings` document; an older saved
 `quality` value maps low→Low, medium→Balanced, high→High. Presets:
@@ -432,6 +432,41 @@ pixel ratio) and persist in `settings.graphics` inside the `metro-dash:settings`
 Low renders straight to the canvas with no composer and never loads `js/fx.js`, so it costs what the old low
 tier did. If the post chain cannot be built the game renders without it and the Graphics section says so.
 The canvas and `<body>` carry `data-gfx-preset` with the resolved preset.
+
+**Hardware-level detection.** `js/gpu-level.js` (shared StarHermit copy, `window.StarHermitGpu`) rates the
+WebGL unmasked renderer plus device facts (`detectSystem()`: phone/tablet, cores, memory, screen) on the
+StarHermit hardware level 0–20 (0 = Galaxy S20 / Intel UHD or weaker, every software renderer and no WebGL;
+20 = RTX 5090; each level ≈ 1.23×; laptop parts two levels below desktop; phones, tablets and ≤ 4 GB machines
+capped at 9). `gfx.js` maps it with `presetForLevel(level, { low: 0, balanced: 4, high: 10, ultra: 17 })`, so
+Auto picks Ultra on strong GPUs; adaptive resolution still steps down when slow. Headless SwiftShader is level
+0 → Low. Phones and tablets pace Auto FPS at half the display refresh rate ("Auto (half refresh rate)") and
+start at 16 simultaneous sounds (shared `game-options.js`).
+
+**Per-preset budgets** (`BUDGETS` / `budgetFor` in `js/gfx.js`). Each preset holds 60 FPS on the weakest GPU
+Auto gives it — Low at level 0, Balanced 4, High 10, Ultra 17. Lanes, obstacles, hitboxes and speed are
+identical on every preset; only visuals change. Spark and mote counts are tuned at the floor level and scale
+up within the preset on faster GPUs (`StarHermitGpu.scaleBudget`, ≤ 2×, at most 8 000 / 800).
+
+| Budget | Low | Balanced | High | Ultra |
+|---|---|---|---|---|
+| Shading model (courier, board, tokens, obstacles, street, city) | Lambert | Standard | Standard + Physical (clear coat) | as High |
+| Detailed asphalt texture (window texture: half; City detail on) | 256 px | 256 px | 512 px | 1024 px |
+| Towers per side (City detail on; plain: 10) | 10 | 16 | 24 | 32 |
+| Spark pool at Particles high (low: 400) | 600 | 1 200 | 2 400 | 4 000 |
+| Ambient motes at Particles high | 80 | 140 | 260 | 400 |
+| Bloom / GTAO resolution | ½ | ½ | ½ | full |
+
+Shading variants are built from the authored materials on first use, cached on them and swapped live; they
+share the authored colours, so the day cycle and palettes keep working.
+
+**Benchmark** (`node tools/gfx-bench.mjs metro-dash`; hook `tests/gfx-bench.mjs` picks the preset in Settings →
+Graphics, starts the daily run from the briefing and keeps changing lanes, jumping and sliding with the
+keyboard, pressing Retry after each crash). Measured 2026-10-17 (GPU ms above the draws-skipped floor,
+projected to the preset's floor level; CPU p90 on the RTX 5090 run):
+
+- Desktop 1920×1080: PASS low (typical 0.19 / slow 0.20 ms GPU, CPU 1.20 ms); PASS balanced (1.62 / 1.55, CPU
+  1.40); PASS high (1.40 / 3.54, CPU 1.80); PASS ultra (2.77 / 3.43, CPU 2.00).
+- Mobile 390×844 @3×: PASS low (0.00 / 0.00, CPU 1.10); PASS balanced (0.00 / 0.00, CPU 1.50).
 
 **Visual assets the design calls for:** a title-screen key art backdrop that shows the three lanes and all
 three obstacle kinds at dawn; a results-screen token emblem tying the score screen to the collectible; a
@@ -634,7 +669,8 @@ boot the game scans daily/journey/lesson keys and offers "Welcome back" with the
 abandon.
 
 **Rendering budgets.** Graphics presets (§8 Graphics) set the pixel-ratio cap (1 / 1.5 / 2 / 2), render
-scale, shadow-map size, post chain, building count (10 or 24 per side) and particle cap (400 or 4 000); the
+scale, shadow-map size, post chain and the per-preset budget (§8: shading model, texture size, towers per side, spark pool and
+motes); the
 pixel ratio is `min(devicePixelRatio, cap) × preset scale × render scale × adaptive scale`. Obstacles use
 fixed pools (22 per kind), tokens a pool of 48, buildings and lamps are instanced and recycled modulo a
 520-unit span; nothing is allocated per frame in the hot path. If WebGL is missing, `createRenderer` falls back
@@ -658,7 +694,7 @@ reachable and no stage soft-locks, plus an endless daily sanity run.
 twice — desktop 1280×800 with the keyboard, then mobile 390×844 with touch — through: title → help (≥5 cards) →
 journey grid (exactly 40 stages, exactly 1 unlocked) → settings toggle → Settings → Graphics (Auto label reads
 "detected: Low", Low then High applied to the canvas's `data-gfx-preset`, a bloom override reflected in the
-summary, both surviving a reload, Auto clearing the override) → **Language** (own signed-in context with a
+summary, which shows "Level 0", both surviving a reload, Auto clearing the override) → **Language** (own signed-in context with a
 stubbed StarHermit API: Automatic resolves to fr-CA from `GET /api/v1/me/language`; the daily run starts in
 French; Pause → Settings → Italian re-renders the settings, Graphics legend, pause overlay, HUD and objective
 while the run stays paused, and PUTs `ui.language`; Report a problem posts to `/reports`; back to Automatic)

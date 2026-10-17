@@ -209,6 +209,8 @@ async function playPass(vpName, contextOpts, { touch }) {
       await page.selectOption('#gfx-bloom', 'off');
       await page.waitForFunction(() => /· High ·/.test(document.getElementById('gfx-summary').textContent)
         && !/bloom/.test(document.getElementById('gfx-summary').textContent));
+      const sum = await page.locator('#gfx-summary').innerText();
+      if (!/ · Level 0 · /.test(sum)) throw new Error(`summary lacks the hardware level: ${sum}`);
       const fromPreset = await page.locator('#gfx-shadows option[value="preset"]').innerText();
       if (fromPreset !== 'From preset (Medium)') throw new Error(`shadows label: ${fromPreset}`);
       await page.screenshot({ path: SHOT('graphics', vpName) });

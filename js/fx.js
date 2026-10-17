@@ -56,6 +56,15 @@ export function makeEnvironment(renderer) {
  * RenderPass → GTAO → UnrealBloom → OutputPass → grade → SMAA/FXAA.
  * Returns { composer, gradePass }. Throws if any pass cannot be built.
  */
+// Run a post pass at a fraction of the frame: EffectComposer.addPass/setSize hand every pass the full
+// frame size, so the pass's own setSize applies the budget's scale (half-res bloom/GTAO below Ultra).
+function atScale(pass, k) {
+  if (!(k < 1)) return pass;
+  const setSize = pass.setSize.bind(pass);
+  pass.setSize = (w, h) => setSize(Math.max(1, Math.round(w * k)), Math.max(1, Math.round(h * k)));
+  return pass;
+}
+
 export function buildComposer(renderer, scene, camera, q, w, h, ratio) {
   const pw = Math.max(1, Math.round(w * ratio)), ph = Math.max(1, Math.round(h * ratio));
   const target = new THREE.WebGLRenderTarget(pw, ph, {
@@ -72,11 +81,11 @@ export function buildComposer(renderer, scene, camera, q, w, h, ratio) {
     ao.blendIntensity = 0.7;
     ao.updateGtaoMaterial({ radius: 0.9, distanceExponent: 1.4, thickness: 1.5, scale: 1.0, samples: q.ao === 'high' ? 16 : 8, distanceFallOff: 1.0 });
     ao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: q.ao === 'high' ? 6 : 4, rings: 2, samples: q.ao === 'high' ? 16 : 8 });
-    composer.addPass(ao);
+    composer.addPass(atScale(ao, q.budget ? q.budget.aoRes : 1));
   }
   if (q.bloom === 'on') {
     // High threshold: only lamps, lit windows, beacons, tokens and neon glow.
-    composer.addPass(new UnrealBloomPass(new THREE.Vector2(w, h), 0.45, 0.45, 0.92));
+    composer.addPass(atScale(new UnrealBloomPass(new THREE.Vector2(w, h), 0.45, 0.45, 0.92), q.budget ? q.budget.bloomRes : 1));
   }
   composer.addPass(new OutputPass());
   let gradePass = null;

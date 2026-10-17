@@ -11,7 +11,7 @@ import * as THREE from '../vendor/three.module.js';
 import { Rng } from './rng.js';
 import { LANE_WIDTH, jumpHeight, speedAt } from './rules.js';
 import { THEMES } from './content.js';
-import { BUILDINGS, PARTICLE_CAP, SHADOW_MAP, describe, detectPreset, migrateQuality, resolve } from './gfx.js';
+import { BUILDINGS, PARTICLE_CAP, SHADOW_MAP, SPARK_MAX, MOTE_MAX, describe, detectLevel, presetForLevel, migrateQuality, resolve } from './gfx.js';
 
 // Authored camera framing constants (not magic offsets — tweak here).
 export const CAMERA = {
@@ -134,7 +134,14 @@ export function createThreeRenderer(container, opts) {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   container.appendChild(renderer.domElement);
   const gpu = gpuName(renderer);
-  const detected = detectPreset(gpu, isMobileDevice());
+  // StarHermit hardware level (js/gpu-level.js): renderer string + device facts (phone/tablet, cores, memory).
+  let sys = { mobile: isMobileDevice(), webgl2: renderer.capabilities.isWebGL2 };
+  try {
+    const G = globalThis.StarHermitGpu;
+    if (G) { const d = G.detectSystem(); sys = { ...sys, mobile: sys.mobile || d.mobile, touch: d.touch, screen: d.screen, cores: d.cores, memoryGb: d.memoryGb, astc: d.astc }; }
+  } catch { /* defaults */ }
+  const gpuLevel = detectLevel(gpu, sys);
+  const detected = presetForLevel(gpuLevel);
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x2e3a67);
@@ -177,10 +184,13 @@ export function createThreeRenderer(container, opts) {
   groundTex.wrapS = groundTex.wrapT = THREE.RepeatWrapping;
   groundTex.repeat.set(1, 40);
 
+  // Detailed asphalt, authored at 512 px and drawn scaled into the preset's texture budget.
+  function makeDetailTex(size) {
   const detailRng = new Rng(0xA5F);
   const dCanvas = document.createElement('canvas');
-  dCanvas.width = 512; dCanvas.height = 512;
+  dCanvas.width = size; dCanvas.height = size;
   const dctx = dCanvas.getContext('2d');
+  dctx.scale(size / 512, size / 512);
   dctx.fillStyle = '#48434f';
   dctx.fillRect(0, 0, 512, 512);
   for (let i = 0; i < 9000; i++) {
@@ -209,6 +219,11 @@ export function createThreeRenderer(container, opts) {
   groundDetailTex.wrapS = groundDetailTex.wrapT = THREE.RepeatWrapping;
   groundDetailTex.repeat.set(1, 20);
   groundDetailTex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  return groundDetailTex;
+  }
+  let detailTexSize = 512;
+  let groundDetailTex = makeDetailTex(detailTexSize);
+  const detailRng = new Rng(0xA5F ^ 0x77);
   const rCanvas = document.createElement('canvas');
   rCanvas.width = rCanvas.height = 128;
   const rctx = rCanvas.getContext('2d');
@@ -252,9 +267,12 @@ export function createThreeRenderer(container, opts) {
   scene.add(detailGroup);
 
   // --- buildings: instanced boxes with emissive window texture ---
+  // Window texture, authored at 128×256 and drawn scaled into half the preset's texture budget.
+  function makeWinTex(size) {
   const winCanvas = document.createElement('canvas');
-  winCanvas.width = 128; winCanvas.height = 256;
+  winCanvas.width = size / 2; winCanvas.height = size;
   const wctx = winCanvas.getContext('2d');
+  wctx.scale(size / 256, size / 256);
   wctx.fillStyle = '#101018';
   wctx.fillRect(0, 0, 128, 256);
   const winRng = new Rng(0xB01);
@@ -270,6 +288,9 @@ export function createThreeRenderer(container, opts) {
   }
   const winTex = new THREE.CanvasTexture(winCanvas);
   winTex.colorSpace = THREE.SRGBColorSpace;
+  return winTex;
+  }
+  let winTex = makeWinTex(256);
   const buildingMat = new THREE.MeshStandardMaterial({
     color: 0xffffff, roughness: 0.78, metalness: 0.15,
     emissive: 0xffc27a, emissiveMap: winTex, emissiveIntensity: 0.4,
@@ -504,9 +525,9 @@ export function createThreeRenderer(container, opts) {
   // --- particles: pooled, bounded, event-tiered ---
   let particleCap = PARTICLE_CAP.low;
   const pGeo = new THREE.BufferGeometry();
-  const pPos = new Float32Array(PARTICLE_CAP.high * 3);
-  const pVel = new Float32Array(PARTICLE_CAP.high * 3);
-  const pLife = new Float32Array(PARTICLE_CAP.high);
+  const pPos = new Float32Array(SPARK_MAX * 3);
+  const pVel = new Float32Array(SPARK_MAX * 3);
+  const pLife = new Float32Array(SPARK_MAX);
   pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
   const pMat = new THREE.PointsMaterial({ color: 0xffc94d, size: 0.45, map: glowTex, transparent: true, opacity: 0.95, depthWrite: false, sizeAttenuation: true });
   const points = new THREE.Points(pGeo, pMat);
@@ -526,7 +547,8 @@ export function createThreeRenderer(container, opts) {
     }
   }
   // ambient city motes drifting past with the run (particles: high; off with reduced motion)
-  const MOTES = 260;
+  const MOTES = MOTE_MAX; // built at the largest budget; the preset draws moteCount of them
+  let moteCount = 260;
   const moteBase = new Float32Array(MOTES * 3);
   const motePos = new Float32Array(MOTES * 3);
   const moteRng = new Rng(0x3073);
@@ -556,7 +578,7 @@ export function createThreeRenderer(container, opts) {
   let envScale = 1;
 
   // --- graphics settings ------------------------------------------------------
-  let q = resolve({}, detected);
+  let q = resolve({}, detected, gpuLevel);
   let gfxKey = null;
   let shadowsAllowedFor = null;
   let fx = null; // lazily imported js/fx.js
@@ -599,13 +621,59 @@ export function createThreeRenderer(container, opts) {
     });
   }
 
+  // Shading-model variants (budget.material): Lambert on Low, Standard on Balanced, the authored
+  // Standard/Physical on High/Ultra. Variants are cached on the authored material (userData.variants) so
+  // shared materials stay shared; maps and emission carry over. Hitboxes never depend on materials.
+  let matTier = 'physical';
+  function variantOf(a, tier) {
+    const kind = a.isMeshPhysicalMaterial ? 'physical' : 'standard';
+    const want = tier === 'lambert' ? 'lambert' : (tier === 'standard' && kind === 'physical') ? 'standard' : kind;
+    if (want === kind) return a;
+    const cache = a.userData.variants || (a.userData.variants = {});
+    if (cache[want]) return cache[want];
+    const p = { color: a.color, map: a.map, emissive: a.emissive, emissiveIntensity: a.emissiveIntensity, emissiveMap: a.emissiveMap,
+      transparent: a.transparent, opacity: a.opacity, side: a.side, fog: a.fog };
+    const m = want === 'lambert' ? new THREE.MeshLambertMaterial(p)
+      : new THREE.MeshStandardMaterial({ ...p, roughness: a.roughness, metalness: a.metalness, roughnessMap: a.roughnessMap, envMapIntensity: a.envMapIntensity });
+    m.color = a.color; m.emissive = a.emissive; // share the live colours (palette / day cycle edit the authored ones)
+    return (cache[want] = m);
+  }
+  function applyMaterialTier(tier) {
+    if (tier === matTier) return;
+    matTier = tier;
+    scene.traverse((o) => {
+      if (!o.isMesh && !o.isInstancedMesh) return;
+      const authored = o.userData.matAuthored || o.material;
+      const list = Array.isArray(authored) ? authored : [authored];
+      if (!list.some((m) => m.isMeshStandardMaterial)) return;
+      o.userData.matAuthored = authored;
+      const next = list.map((m) => (m.isMeshStandardMaterial ? variantOf(m, tier) : m));
+      o.material = Array.isArray(authored) ? next : next[0];
+    });
+  }
+  // Procedural textures at the budget's size: detailed asphalt = size, windows = half.
+  function applyTextureBudget(size) {
+    if (size === detailTexSize) return;
+    detailTexSize = size;
+    const oldD = groundDetailTex, oldW = winTex;
+    groundDetailTex = makeDetailTex(size);
+    winTex = makeWinTex(size);
+    buildingMat.emissiveMap = winTex;
+    buildingMat.needsUpdate = true;
+    for (const v of Object.values(buildingMat.userData.variants || {})) { v.emissiveMap = winTex; v.needsUpdate = true; }
+    oldD.dispose(); oldW.dispose();
+  }
+
   function setGraphics(saved) {
     const shadowsAllowed = !reduced();
     const key = JSON.stringify(saved || {}) + '|' + shadowsAllowed + '|' + !!fx;
     if (key === gfxKey) return;
     gfxKey = key;
     shadowsAllowedFor = shadowsAllowed;
-    q = resolve(saved, detected);
+    q = resolve(saved, detected, gpuLevel);
+    const b = q.budget;
+    applyMaterialTier(b.material);
+    applyTextureBudget(b.texture);
     // shadows (reduced motion keeps the sweeping sun shadows off)
     const shadowSize = shadowsAllowed ? SHADOW_MAP[q.shadows] : 0;
     const wasOn = renderer.shadowMap.enabled;
@@ -618,14 +686,22 @@ export function createThreeRenderer(container, opts) {
     if (wasOn !== renderer.shadowMap.enabled) allMaterials((m) => { m.needsUpdate = true; });
     // detail: city density, textured asphalt, curbs, light pools, beacons
     const detailed = q.detail === 'detailed';
-    if (buildingCount !== BUILDINGS[q.detail]) buildCity(BUILDINGS[q.detail], themeSeed);
+    const towers = detailed ? b.buildings : BUILDINGS.plain;
+    if (buildingCount !== towers) buildCity(towers, themeSeed);
     groundMat.map = detailed ? groundDetailTex : groundTex;
     groundMat.roughnessMap = detailed ? groundRoughTex : null;
     groundMat.roughness = detailed ? 0.9 : 0.95;
     groundMat.needsUpdate = true;
+    for (const v of Object.values(groundMat.userData.variants || {})) {
+      v.map = groundMat.map;
+      if (v.isMeshStandardMaterial) { v.roughnessMap = groundMat.roughnessMap; v.roughness = groundMat.roughness; }
+      v.needsUpdate = true;
+    }
     detailGroup.visible = detailed;
     // particles
-    particleCap = PARTICLE_CAP[q.particles];
+    particleCap = q.particles === 'high' ? b.sparks : PARTICLE_CAP.low;
+    moteCount = Math.min(MOTES, b.motes);
+    moteGeo.setDrawRange(0, moteCount);
     for (let i = particleCap; i < pLife.length; i++) pLife[i] = 0;
     // reflections + post need the lazily loaded fx module
     if ((q.reflections === 'on' || q.post) && !fx) loadFx();
@@ -787,6 +863,7 @@ export function createThreeRenderer(container, opts) {
     const win = a.win + (b.win - a.win) * t;
     night = Math.max(0, Math.min(1, (win - 0.05) / 1.55));
     buildingMat.emissiveIntensity = win * 0.55;
+    for (const v of Object.values(buildingMat.userData.variants || {})) v.emissiveIntensity = buildingMat.emissiveIntensity;
     // lamps glow hot enough to bloom as the light fades
     const glow = 1 + night * 1.6;
     lampGlowMat.color.setRGB(1.0 * glow, 0.88 * glow, 0.66 * glow);
@@ -803,7 +880,10 @@ export function createThreeRenderer(container, opts) {
     const s = 0.25 + 0.75 * (hemi.intensity / 0.95);
     if (Math.abs(s - envScale) > 0.01) {
       envScale = s;
-      for (const [m, base] of envMats) m.envMapIntensity = base * s;
+      for (const [m, base] of envMats) {
+        m.envMapIntensity = base * s;
+        for (const v of Object.values(m.userData.variants || {})) v.envMapIntensity = base * s; // Lambert ignores it
+      }
     }
     if (sun.castShadow) fitShadow();
   }
@@ -832,7 +912,7 @@ export function createThreeRenderer(container, opts) {
     setTheme(themeId, seed) {
       currentTheme = THEMES[themeId] || THEMES.dawn;
       themeSeed = seed || 1;
-      buildCity(BUILDINGS[q.detail], themeSeed);
+      buildCity(q.detail === 'detailed' ? q.budget.buildings : BUILDINGS.plain, themeSeed);
       groundTex.needsUpdate = true;
     },
     applyQuality,
@@ -845,6 +925,7 @@ export function createThreeRenderer(container, opts) {
       const px = [Math.round(size[0] * pixelRatio), Math.round(size[1] * pixelRatio)];
       return {
         gpu: gpu || 'unknown GPU',
+        level: gpuLevel,
         detected,
         resolved: q,
         pixels: px,
@@ -987,7 +1068,7 @@ export function createThreeRenderer(container, opts) {
       motes.visible = q.particles === 'high' && !still;
       if (motes.visible) {
         const drift = now / 1000;
-        for (let i = 0; i < MOTES; i++) {
+        for (let i = 0; i < moteCount; i++) {
           const z = (((moteBase[i * 3 + 2] + distance * 0.9) % 140) + 140) % 140;
           motePos[i * 3] = moteBase[i * 3] + Math.sin(drift * 0.7 + i) * 0.3;
           motePos[i * 3 + 1] = moteBase[i * 3 + 1] + Math.sin(drift * 0.5 + i * 1.7) * 0.25;

@@ -11,6 +11,7 @@ const EN = {
   showFps: 'Show frame rate',
   postFailed: 'Post-processing is unavailable on this device — rendering without effects.',
   unavailable: '3D graphics unavailable — the compatibility renderer ignores these options.',
+  level: 'Level {n}',
   presets: { low: 'Low', balanced: 'Balanced', high: 'High', ultra: 'Ultra' },
   cats: {
     shadows: 'Shadows', ao: 'Ambient occlusion', bloom: 'Bloom', grade: 'Color grade',
@@ -36,6 +37,7 @@ const ES = {
   showFps: 'Mostrar fotogramas por segundo',
   postFailed: 'El posprocesado no está disponible en este dispositivo: se muestra sin efectos.',
   unavailable: 'Gráficos 3D no disponibles: el renderizador de compatibilidad ignora estas opciones.',
+  level: 'Nivel {n}',
   presets: { low: 'Baja', balanced: 'Equilibrada', high: 'Alta', ultra: 'Ultra' },
   cats: {
     shadows: 'Sombras', ao: 'Oclusión ambiental', bloom: 'Resplandor', grade: 'Corrección de color',
@@ -61,6 +63,7 @@ const FR = {
   showFps: 'Afficher les images par seconde',
   postFailed: 'Le post-traitement n’est pas disponible sur cet appareil : rendu sans effets.',
   unavailable: 'Graphismes 3D indisponibles : le moteur de compatibilité ignore ces options.',
+  level: 'Niveau {n}',
   presets: { low: 'Basse', balanced: 'Équilibrée', high: 'Haute', ultra: 'Ultra' },
   cats: {
     shadows: 'Ombres', ao: 'Occlusion ambiante', bloom: 'Flou lumineux', grade: 'Étalonnage',
@@ -99,6 +102,7 @@ export const GFX_STRINGS = {
     showFps: 'Bildrate anzeigen',
     postFailed: 'Nachbearbeitung ist auf diesem Gerät nicht verfügbar – Darstellung ohne Effekte.',
     unavailable: '3D-Grafik nicht verfügbar – der Kompatibilitätsmodus ignoriert diese Optionen.',
+    level: 'Stufe {n}',
     presets: { low: 'Niedrig', balanced: 'Ausgewogen', high: 'Hoch', ultra: 'Ultra' },
     cats: {
       shadows: 'Schatten', ao: 'Umgebungsverdeckung', bloom: 'Leuchteffekt', grade: 'Farbkorrektur',
@@ -130,6 +134,7 @@ export const GFX_STRINGS = {
     showFps: 'Mostrar taxa de quadros',
     postFailed: 'O pós-processamento não está disponível neste dispositivo — renderizando sem efeitos.',
     unavailable: 'Gráficos 3D indisponíveis — o renderizador de compatibilidade ignora estas opções.',
+    level: 'Nível {n}',
     presets: { low: 'Baixa', balanced: 'Equilibrada', high: 'Alta', ultra: 'Ultra' },
     cats: {
       shadows: 'Sombras', ao: 'Oclusão ambiente', bloom: 'Brilho', grade: 'Correção de cor',
@@ -154,6 +159,7 @@ export const GFX_STRINGS = {
     showFps: 'Mostra frequenza fotogrammi',
     postFailed: 'La post-elaborazione non è disponibile su questo dispositivo: rendering senza effetti.',
     unavailable: 'Grafica 3D non disponibile: il renderer di compatibilità ignora queste opzioni.',
+    level: 'Livello {n}',
     presets: { low: 'Bassa', balanced: 'Bilanciata', high: 'Alta', ultra: 'Ultra' },
     cats: {
       shadows: 'Ombre', ao: 'Occlusione ambientale', bloom: 'Bagliore', grade: 'Correzione colore',

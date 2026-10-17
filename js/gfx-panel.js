@@ -154,7 +154,8 @@ export function createGraphicsPanel({ root, settings, getRenderer, onChange }) {
       return;
     }
     const cost = describe(info.resolved, info.pixels, t.words);
-    summary.textContent = `${info.gpu} · ${presetName(info.resolved.preset)} · ${cost}`;
+    const level = info.level != null ? ` · ${t.level.replace('{n}', info.level)}` : '';
+    summary.textContent = `${info.gpu}${level} · ${presetName(info.resolved.preset)} · ${cost}`;
     root.dataset.gfxPreset = info.resolved.preset;
     note.textContent = t.postFailed;
     note.hidden = !info.postFailed;
