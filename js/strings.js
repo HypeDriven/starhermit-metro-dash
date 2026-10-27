@@ -1,9 +1,10 @@
 /* Metro Dash — translation tables (see js/i18n.js).
  * Each row: [English key, es-419, de-DE, fr-FR, pt-BR, it-IT]. en-GB, es-ES and
  * fr-CA list only where they differ from en-US, es-419 and fr-FR.
- * "Metro Dash" and "StarHermit" are names and stay as they are. The Graphics
- * strings live in js/gfx-strings.js and the account strings in
- * js/sh-strings.js; both follow the same game language.
+ * "Metro Dash" and "StarHermit" are names and stay as they are. The account
+ * strings live in js/sh-strings.js and follow the same language. Every key
+ * here is one the engine client (native/*.ts) or the content shows
+ * (tests/i18n.test.mjs checks both ways).
  */
 (function (root) {
   'use strict';
