@@ -1,0 +1,28 @@
+# Lesson 1 (Switch Lanes) on a phone: a tap on the tray's Move left before the first kiosk, then a swipe to the
+# right on the street back to the centre lane, which completes the lesson's two lane changes; then the results.
+# viewport 390x844@3
+until 300 Metro Dash
+frames 150
+save title
+touch =Learn
+until 60 single rule
+frames 10
+touch =Lesson 1: Switch Lanes
+until 60 Expected
+frames 10
+save briefing
+touch =Start
+until 120 GO
+frames 40
+save run
+touch =Move left
+frames 120
+save left-lane
+swipe 50% 60% 85% 60% 3
+until 120 Stage Complete
+frames 20
+save results
+expect First Arrival
+touch =Menu
+until 60 How to Play
+frames 10

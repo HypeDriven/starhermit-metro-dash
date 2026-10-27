@@ -1,0 +1,67 @@
+# The Daily run left to crash (its seed is the day's, so no planned moves): the countdown, a pause with Settings
+# and How to Play opened from the pause panel and back, Resume, the crash's results and the Scores board; then a
+# Practice run at Intense, paused, restarted and ended from the pause panel.
+until 300 Metro Dash
+frames 60
+click Play Daily Run
+until 60 Expected
+frames 10
+click =Start
+until 120 GO
+frames 5
+key KeyP 1
+until 60 Resume
+frames 10
+click =Settings
+until 60 Open Options
+frames 10
+click =Back
+until 60 End Run
+frames 10
+click =How to Play
+until 60 Rules
+frames 10
+click =Back
+until 60 End Run
+frames 10
+click =Resume
+until 3000 Run Over
+frames 20
+expect Crushed it until the
+save daily-crash
+click =Menu
+until 60 How to Play
+frames 10
+click =Scores
+until 60 Local board
+frames 10
+expect Daily
+save scores
+click =Back
+until 60 How to Play
+frames 10
+click =Practice
+until 60 Unranked
+frames 10
+click =Intense
+frames 5
+click =Start Practice
+until 60 Expected
+frames 10
+expect Practice — Intense
+click =Start
+until 120 GO
+frames 20
+key Escape 1
+until 60 End Run
+frames 10
+click =Restart
+until 120 GO
+frames 10
+key Escape 1
+until 60 End Run
+frames 10
+click =End Run
+until 60 Run Ended
+frames 20
+save practice-ended

@@ -9,12 +9,8 @@
   'use strict';
   var ROWS = [
     // ---- top bar, HUD
-    ['Skip to game', 'Saltar al juego', 'Zum Spiel springen', 'Aller au jeu', 'Pular para o jogo', 'Vai al gioco'],
-    ['Status', 'Estado', 'Status', 'État', 'Status', 'Stato'],
     ['Guest', 'Invitado', 'Gast', 'Invité', 'Convidado', 'Ospite'],
-    ['Server-synced time', 'Hora sincronizada con el servidor', 'Mit dem Server synchronisierte Zeit', 'Heure synchronisée avec le serveur', 'Hora sincronizada com o servidor', 'Ora sincronizzata con il server'],
     ['Toggle sound', 'Activar o desactivar sonido', 'Ton ein/aus', 'Activer/couper le son', 'Ligar/desligar som', 'Attiva/disattiva audio'],
-    ['Cloud save status', 'Estado del guardado en la nube', 'Status des Cloud-Spielstands', 'État de la sauvegarde en ligne', 'Status do salvamento na nuvem', 'Stato del salvataggio nel cloud'],
     ['Syncing…', 'Sincronizando…', 'Synchronisiere …', 'Synchronisation…', 'Sincronizando…', 'Sincronizzazione…'],
     ['Cloud synced', 'Nube sincronizada', 'Cloud synchronisiert', 'Synchronisé en ligne', 'Nuvem sincronizada', 'Cloud sincronizzato'],
     ['Cloud offline', 'Nube sin conexión', 'Cloud offline', 'En ligne indisponible', 'Nuvem offline', 'Cloud offline'],
@@ -25,7 +21,6 @@
     ['Tokens', 'Fichas', 'Marken', 'Jetons', 'Fichas', 'Gettoni'],
     ['Speed', 'Velocidad', 'Tempo', 'Vitesse', 'Velocidade', 'Velocità'],
     ['Pause (Esc)', 'Pausa (Esc)', 'Pause (Esc)', 'Pause (Échap)', 'Pausar (Esc)', 'Pausa (Esc)'],
-    ['Touch controls', 'Controles táctiles', 'Touch-Steuerung', 'Commandes tactiles', 'Controles de toque', 'Comandi touch'],
     ['Move left', 'Moverse a la izquierda', 'Nach links', 'Aller à gauche', 'Mover para a esquerda', 'Sposta a sinistra'],
     ['Move right', 'Moverse a la derecha', 'Nach rechts', 'Aller à droite', 'Mover para a direita', 'Sposta a destra'],
     ['Jump', 'Saltar', 'Springen', 'Sauter', 'Pular', 'Salta'],
@@ -49,7 +44,6 @@
 
     // ---- title, menus
     ['Three lanes. One city. Dawn to night.', 'Tres carriles. Una ciudad. Del amanecer a la noche.', 'Drei Spuren. Eine Stadt. Vom Morgen bis zur Nacht.', 'Trois voies. Une ville. De l’aube à la nuit.', 'Três faixas. Uma cidade. Do amanhecer à noite.', 'Tre corsie. Una città. Dall’alba alla notte.'],
-    ['Main menu', 'Menú principal', 'Hauptmenü', 'Menu principal', 'Menu principal', 'Menu principale'],
     ['Play Daily Run — {day}', 'Jugar la carrera diaria — {day}', 'Tageslauf spielen – {day}', 'Jouer la course du jour — {day}', 'Jogar a corrida diária — {day}', 'Gioca la corsa del giorno — {day}'],
     ['Journey', 'Viaje', 'Reise', 'Voyage', 'Jornada', 'Viaggio'],
     ['Learn', 'Aprender', 'Lernen', 'Apprendre', 'Aprender', 'Impara'],
@@ -59,7 +53,6 @@
     ['Settings', 'Configuración', 'Einstellungen', 'Paramètres', 'Configurações', 'Impostazioni'],
     ['How to Play', 'Cómo jugar', 'Spielanleitung', 'Comment jouer', 'Como jogar', 'Come si gioca'],
     ['Journey {done}/{stages} · Lessons {lessons}/{lessonTotal} · Total distance {distance}', 'Viaje {done}/{stages} · Lecciones {lessons}/{lessonTotal} · Distancia total {distance}', 'Reise {done}/{stages} · Lektionen {lessons}/{lessonTotal} · Gesamtstrecke {distance}', 'Voyage {done}/{stages} · Leçons {lessons}/{lessonTotal} · Distance totale {distance}', 'Jornada {done}/{stages} · Lições {lessons}/{lessonTotal} · Distância total {distance}', 'Viaggio {done}/{stages} · Lezioni {lessons}/{lessonTotal} · Distanza totale {distance}'],
-    ['3D graphics unavailable — running in compatibility mode. Your progress is safe.', 'Gráficos 3D no disponibles: se usa el modo de compatibilidad. Tu progreso está a salvo.', '3D-Grafik nicht verfügbar – Kompatibilitätsmodus aktiv. Dein Fortschritt ist sicher.', 'Graphismes 3D indisponibles — mode de compatibilité. Votre progression est en sécurité.', 'Gráficos 3D indisponíveis — modo de compatibilidade. Seu progresso está seguro.', 'Grafica 3D non disponibile: modalità di compatibilità. I tuoi progressi sono al sicuro.'],
     ['40 stages. New traffic mechanics arrive one at a time; every fifth stage is a mastery test.', '40 etapas. Las nuevas mecánicas de tráfico llegan de una en una; cada cinco etapas hay una prueba de maestría.', '40 Etappen. Neue Verkehrsmechaniken kommen einzeln hinzu; jede fünfte Etappe ist eine Meisterprüfung.', '40 étapes. Les nouvelles mécaniques de trafic arrivent une à une ; toutes les cinq étapes, un test de maîtrise.', '40 etapas. Novas mecânicas de tráfego chegam uma de cada vez; a cada cinco etapas há um teste de maestria.', '40 tappe. Le nuove meccaniche del traffico arrivano una alla volta; ogni cinque tappe c’è una prova di maestria.'],
     ['Back', 'Atrás', 'Zurück', 'Retour', 'Voltar', 'Indietro'],
     ['Interactive lessons. Each one teaches a single rule — and makes you use it.', 'Lecciones interactivas. Cada una enseña una sola regla y te obliga a usarla.', 'Interaktive Lektionen. Jede lehrt genau eine Regel – und du musst sie anwenden.', 'Leçons interactives. Chacune enseigne une seule règle — et vous la fait appliquer.', 'Lições interativas. Cada uma ensina uma única regra — e faz você usá-la.', 'Lezioni interattive. Ognuna insegna una sola regola e te la fa usare.'],
@@ -70,7 +63,6 @@
     ['Standard', 'Estándar', 'Standard', 'Standard', 'Padrão', 'Standard'],
     ['Intense', 'Intensa', 'Intensiv', 'Intense', 'Intensa', 'Intensa'],
     ['Start Practice', 'Empezar práctica', 'Übung starten', 'Commencer l’entraînement', 'Começar prática', 'Inizia la pratica'],
-    ['Briefing', 'Instrucciones', 'Briefing', 'Briefing', 'Instruções', 'Briefing'],
     ['Start', 'Empezar', 'Starten', 'Commencer', 'Começar', 'Inizia'],
 
     // ---- content titles (js/content.js)
@@ -162,7 +154,6 @@
     ['kiosk', 'el quiosco', 'der Kiosk', 'le kiosque', 'o quiosque', 'il chiosco'],
     ['track', 'la vía', 'die Strecke', 'la voie', 'a via', 'il binario'],
     ['{n} points', '{n} puntos', '{n} Punkte', '{n} points', '{n} pontos', '{n} punti'],
-    ['Score breakdown', 'Desglose de la puntuación', 'Punkteaufschlüsselung', 'Détail du score', 'Detalhes da pontuação', 'Dettaglio del punteggio'],
     ['Component', 'Componente', 'Bestandteil', 'Composante', 'Componente', 'Componente'],
     ['Points', 'Puntos', 'Punkte', 'Points', 'Pontos', 'Punti'],
     ['Total', 'Total', 'Gesamt', 'Total', 'Total', 'Totale'],
@@ -175,16 +166,12 @@
     ['Retry', 'Reintentar', 'Nochmal', 'Réessayer', 'Tentar de novo', 'Riprova'],
     ['Next Stage', 'Siguiente etapa', 'Nächste Etappe', 'Étape suivante', 'Próxima etapa', 'Tappa successiva'],
     ['Menu', 'Menú', 'Menü', 'Menu', 'Menu', 'Menu'],
-    ['Daily submission rejected: {error}', 'Envío diario rechazado: {error}', 'Tageseinreichung abgelehnt: {error}', 'Envoi du jour refusé : {error}', 'Envio diário recusado: {error}', 'Invio giornaliero rifiutato: {error}'],
     ['You', 'Tú', 'Du', 'Vous', 'Você', 'Tu'],
-    ['Player {id}', 'Jugador {id}', 'Spieler {id}', 'Joueur {id}', 'Jogador {id}', 'Giocatore {id}'],
 
     // ---- scores
-    ['Leaderboard filter', 'Filtro de la clasificación', 'Bestenlisten-Filter', 'Filtre du classement', 'Filtro do ranking', 'Filtro classifica'],
     ['All Runs', 'Todas', 'Alle Läufe', 'Toutes', 'Todas', 'Tutte'],
     ['Mine', 'Mías', 'Meine', 'Les miennes', 'Minhas', 'Mie'],
     ['Local board (casual) — global validation requires hosting.', 'Tabla local (informal): la validación global requiere alojamiento.', 'Lokale Liste (locker) – globale Prüfung braucht Hosting.', 'Classement local (informel) — la validation mondiale exige un hébergement.', 'Ranking local (casual) — a validação global exige hospedagem.', 'Classifica locale (informale): la convalida globale richiede l’hosting.'],
-    ['Leaderboard', 'Clasificación', 'Bestenliste', 'Classement', 'Ranking', 'Classifica'],
     ['Date', 'Fecha', 'Datum', 'Date', 'Data', 'Data'],
     ['No runs yet. Go play!', 'Aún no hay carreras. ¡A jugar!', 'Noch keine Läufe. Los geht’s!', 'Aucune course pour l’instant. À vous de jouer !', 'Nenhuma corrida ainda. Vá jogar!', 'Ancora nessuna corsa. Gioca!'],
 
@@ -204,29 +191,15 @@
 
     // ---- settings
     ['Audio', 'Audio', 'Audio', 'Audio', 'Áudio', 'Audio'],
-    ['Music', 'Música', 'Musik', 'Musique', 'Música', 'Musica'],
-    ['Effects', 'Efectos', 'Effekte', 'Effets', 'Efeitos', 'Effetti'],
-    ['Ambience', 'Ambiente', 'Umgebung', 'Ambiance', 'Ambiente', 'Ambiente'],
-    ['Voice cues', 'Indicaciones de voz', 'Sprachhinweise', 'Indications vocales', 'Dicas de voz', 'Indicazioni vocali'],
     ['Display', 'Pantalla', 'Anzeige', 'Affichage', 'Tela', 'Schermo'],
-    ['Reduced motion', 'Movimiento reducido', 'Weniger Bewegung', 'Animations réduites', 'Movimento reduzido', 'Movimento ridotto'],
-    ['High contrast', 'Alto contraste', 'Hoher Kontrast', 'Contraste élevé', 'Alto contraste', 'Contrasto elevato'],
     ['Color palette', 'Paleta de colores', 'Farbpalette', 'Palette de couleurs', 'Paleta de cores', 'Tavolozza dei colori'],
     ['Deuteranopia-safe', 'Apta para deuteranopía', 'Für Deuteranopie', 'Adaptée à la deutéranopie', 'Para deuteranopia', 'Adatta alla deuteranopia'],
     ['Protanopia-safe', 'Apta para protanopía', 'Für Protanopie', 'Adaptée à la protanopie', 'Para protanopia', 'Adatta alla protanopia'],
     ['Tritanopia-safe', 'Apta para tritanopía', 'Für Tritanopie', 'Adaptée à la tritanopie', 'Para tritanopia', 'Adatta alla tritanopia'],
     ['Accessibility & Controls', 'Accesibilidad y controles', 'Barrierefreiheit & Steuerung', 'Accessibilité et commandes', 'Acessibilidade e controles', 'Accessibilità e comandi'],
-    ['Larger text', 'Texto más grande', 'Größerer Text', 'Texte plus grand', 'Texto maior', 'Testo più grande'],
     ['Left-handed touch tray', 'Botones táctiles para zurdos', 'Touch-Leiste für Linkshänder', 'Commandes tactiles pour gauchers', 'Botões de toque para canhotos', 'Comandi touch per mancini'],
     ['Show hints', 'Mostrar pistas', 'Tipps anzeigen', 'Afficher les indices', 'Mostrar dicas', 'Mostra suggerimenti'],
-    ['Select a binding, then press a key to remap.', 'Elige una asignación y pulsa una tecla para cambiarla.', 'Wähle eine Belegung und drücke dann eine Taste zum Ändern.', 'Choisissez une commande, puis appuyez sur une touche pour la changer.', 'Escolha um comando e pressione uma tecla para remapear.', 'Scegli un comando, poi premi un tasto per riassegnarlo.'],
-    ['Left', 'Izquierda', 'Links', 'Gauche', 'Esquerda', 'Sinistra'],
-    ['Right', 'Derecha', 'Rechts', 'Droite', 'Direita', 'Destra'],
-    ['Press a key…', 'Pulsa una tecla…', 'Taste drücken …', 'Appuyez sur une touche…', 'Pressione uma tecla…', 'Premi un tasto…'],
-    ['Remap {action}', 'Reasignar {action}', '{action} neu belegen', 'Réassigner {action}', 'Remapear {action}', 'Riassegna {action}'],
-    ['Reset keys', 'Restablecer teclas', 'Tasten zurücksetzen', 'Réinitialiser les touches', 'Redefinir teclas', 'Ripristina tasti'],
     ['Data', 'Datos', 'Daten', 'Données', 'Dados', 'Dati'],
-    ['Share anonymous usage stats', 'Compartir estadísticas de uso anónimas', 'Anonyme Nutzungsstatistiken teilen', 'Partager des statistiques d’usage anonymes', 'Compartilhar estatísticas de uso anônimas', 'Condividi statistiche d’uso anonime'],
     ['Reset local progress', 'Restablecer el progreso local', 'Lokalen Fortschritt zurücksetzen', 'Réinitialiser la progression locale', 'Redefinir o progresso local', 'Azzera i progressi locali'],
     ['Reset all local progress, scores, and achievements?', '¿Restablecer todo el progreso, las puntuaciones y los logros locales?', 'Gesamten lokalen Fortschritt, alle Punkte und Erfolge zurücksetzen?', 'Réinitialiser toute la progression, les scores et les succès locaux ?', 'Redefinir todo o progresso, as pontuações e as conquistas locais?', 'Azzerare tutti i progressi, i punteggi e gli obiettivi locali?'],
     ['Local progress reset', 'Progreso local restablecido', 'Lokaler Fortschritt zurückgesetzt', 'Progression locale réinitialisée', 'Progresso local redefinido', 'Progressi locali azzerati'],
@@ -243,9 +216,14 @@
     ['Abandon run', 'Abandonar carrera', 'Lauf abbrechen', 'Abandonner la course', 'Abandonar corrida', 'Abbandona la corsa'],
     ['Your run was paused while you were away. State is restored exactly as you left it.', 'Tu carrera se pausó mientras no estabas. Todo está tal como lo dejaste.', 'Dein Lauf wurde pausiert, während du weg warst. Alles ist genau so, wie du es verlassen hast.', 'Votre course a été mise en pause pendant votre absence. Tout est restauré tel quel.', 'Sua corrida foi pausada enquanto você estava fora. Tudo está como você deixou.', 'La corsa è stata messa in pausa mentre eri via. Tutto è esattamente come l’hai lasciato.'],
     ['You have an interrupted run at {n} units. Pick up exactly where you left off.', 'Tienes una carrera interrumpida en {n} unidades. Continúa justo donde la dejaste.', 'Du hast einen unterbrochenen Lauf bei {n} Einheiten. Mach genau dort weiter.', 'Vous avez une course interrompue à {n} unités. Reprenez exactement là où vous en étiez.', 'Você tem uma corrida interrompida em {n} unidades. Continue exatamente de onde parou.', 'Hai una corsa interrotta a {n} unità. Riprendi esattamente da dove avevi lasciato.'],
-    ['Something went wrong while starting the game. Your saved progress is untouched — please reload.', 'Algo salió mal al iniciar el juego. Tu progreso guardado está intacto: vuelve a cargar la página.', 'Beim Starten ist etwas schiefgelaufen. Dein gespeicherter Fortschritt ist unberührt – bitte neu laden.', 'Un problème est survenu au démarrage. Votre progression enregistrée est intacte — rechargez la page.', 'Algo deu errado ao iniciar o jogo. Seu progresso salvo está intacto — recarregue a página.', 'Qualcosa è andato storto all’avvio. I progressi salvati sono intatti: ricarica la pagina.']
+    // ---- engine client
+    ['Sound, graphics, language, larger text, high contrast and reduced motion are in the StarHermit Options.', 'El sonido, los gráficos, el idioma, el texto más grande, el alto contraste y el movimiento reducido están en las Opciones de StarHermit.', 'Ton, Grafik, Sprache, größere Schrift, hoher Kontrast und reduzierte Bewegung findest du in den StarHermit-Optionen.', 'Le son, les graphismes, la langue, le texte agrandi, le contraste élevé et les animations réduites se trouvent dans les Options StarHermit.', 'Som, gráficos, idioma, texto maior, alto contraste e movimento reduzido ficam nas Opções do StarHermit.', 'Audio, grafica, lingua, testo più grande, contrasto elevato e movimento ridotto sono nelle Opzioni di StarHermit.'],
+    ['Open Options', 'Abrir Opciones', 'Optionen öffnen', 'Ouvrir les options', 'Abrir Opções', 'Apri Opzioni'],
+    ['Key bindings', 'Asignación de teclas', 'Tastenbelegung', 'Affectation des touches', 'Atalhos de teclado', 'Assegnazione tasti'],
+    ['Cancel', 'Cancelar', 'Abbrechen', 'Annuler', 'Cancelar', 'Annulla'],
+    ['Reset', 'Restablecer', 'Zurücksetzen', 'Réinitialiser', 'Redefinir', 'Ripristina'],
+    ['lane change', 'cambio de carril', 'Spurwechsel', 'changement de voie', 'troca de faixa', 'cambio di corsia'],
   ];
-
   var COLS = ['es-419', 'de-DE', 'fr-FR', 'pt-BR', 'it-IT'];
   var T = { 'en-US': {} };
   COLS.forEach(function (loc) { T[loc] = {}; });
@@ -260,10 +238,8 @@
   T['es-ES'] = {
     'Settings': 'Ajustes',
     'Your run was paused while you were away. State is restored exactly as you left it.': 'Tu carrera se ha pausado mientras no estabas. Todo está tal como lo dejaste.',
-    'Something went wrong while starting the game. Your saved progress is untouched — please reload.': 'Algo ha ido mal al iniciar el juego. Tu progreso guardado está intacto: vuelve a cargar la página.',
     'Rewound 5 seconds': 'Has retrocedido 5 segundos',
     'Rush hour density': 'Densidad de hora punta',
-    'Select a binding, then press a key to remap.': 'Elige una asignación y pulsa una tecla para cambiarla.',
     'Crushed it until the {obstacle} fought back — {n} points': 'Ibas arrasando hasta que {obstacle} ha contraatacado: {n} puntos'
   };
   // fr-CA: Canadian French (pointage for score).
@@ -271,8 +247,7 @@
     'Score': 'Pointage',
     'Scores': 'Pointages',
     'Score {n}': 'Pointage {n}',
-    'Score breakdown': 'Détail du pointage'
   };
 
   root.MD_STRINGS = T;
-})(typeof self !== 'undefined' ? self : this);
+})(typeof globalThis !== 'undefined' ? globalThis : self);

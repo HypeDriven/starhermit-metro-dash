@@ -1,0 +1,39 @@
+# Journey stage 1 played to its objective by content.js's reference bot (tools/gen-plays.mjs; generated: do not edit),
+# the total checked on the results (109 points); then Next Stage opens stage 2's briefing, and the
+# Scores board and the Journey grid show the run.
+until 300 Metro Dash
+frames 30
+click =Journey
+until 60 mastery test
+frames 10
+click =Stage 1
+until 60 Expected
+frames 10
+save briefing
+click =Start
+frames 569
+key ArrowUp 1
+until 600 Stage Complete
+frames 20
+expect Objective complete — 109 points
+save results
+click =Next Stage
+until 60 Stage 2
+frames 10
+save stage-2-briefing
+click =Back
+until 60 How to Play
+frames 10
+click =Scores
+until 60 Local board
+frames 10
+expect 109
+save scores
+click =Back
+until 60 How to Play
+frames 10
+click =Journey
+until 60 mastery test
+frames 20
+expect ★
+save journey-done

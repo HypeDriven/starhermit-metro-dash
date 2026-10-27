@@ -1,0 +1,72 @@
+# The title and every door off it on a desktop window: Journey, Learn, Challenges, Practice (a difficulty picked),
+# Scores (the filters), Settings (the game's options and the runtime's Options), How to Play; the sound toggle.
+until 300 Metro Dash
+frames 150
+save title
+click =Toggle sound
+frames 5
+expect ∅
+click =Toggle sound
+frames 5
+click =Journey
+until 60 mastery test
+frames 10
+save journey
+click =Back
+until 60 How to Play
+frames 10
+click =Learn
+until 60 single rule
+frames 10
+expect Lesson 1: Switch Lanes
+save learn
+click =Back
+until 60 How to Play
+frames 10
+click =Challenges
+until 60 Constrained runs
+frames 10
+expect Center Lock
+click =Back
+until 60 How to Play
+frames 10
+click =Practice
+until 60 Unranked
+frames 10
+click =Intense
+frames 5
+save practice
+click =Back
+until 60 How to Play
+frames 10
+click =Scores
+until 60 Local board
+frames 10
+expect No runs yet
+click =Daily
+frames 5
+click =Back
+until 60 How to Play
+frames 10
+click =Settings
+until 60 Open Options
+frames 10
+click =Left-handed touch tray
+frames 5
+save settings
+click =Reset local progress
+until 30 Reset all local progress
+frames 5
+click =Cancel
+frames 5
+click =Back
+until 60 How to Play
+frames 10
+click =How to Play
+until 60 Rules
+frames 10
+expect Resume is always the first option
+save help
+click =Back
+until 60 Play Daily Run
+frames 10

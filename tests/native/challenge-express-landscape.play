@@ -1,0 +1,42 @@
+# The Express Service challenge played to its objective by the reference bot in a phone held sideways
+# (tools/gen-plays.mjs; generated: do not edit): 685 points on the results, then Retry and End Run from the pause panel.
+# viewport 844x390@3
+until 300 Metro Dash
+frames 30
+click =Challenges
+until 60 Constrained runs
+frames 10
+save challenges
+click =Express Service
+until 60 Expected
+frames 10
+save briefing
+click =Start
+frames 228
+key ArrowUp 1
+frames 64
+key ArrowUp 1
+frames 75
+key ArrowUp 1
+frames 13
+key ArrowLeft 1
+frames 91
+key ArrowDown 1
+until 900 Stage Complete
+frames 20
+expect 685 points
+save results
+click =Retry
+until 120 GO
+frames 30
+key Escape 1
+until 60 End Run
+frames 10
+save paused
+click =End Run
+until 60 Run Ended
+frames 20
+save ended
+click =Menu
+until 60 How to Play
+frames 10

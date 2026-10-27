@@ -1,0 +1,174 @@
+/* Metro Dash — the browser build's css/style.css rewritten class-based for
+   the engine's UI (`npm run css` converts it into assets/ui-style.json).
+   Element selectors, ids, attribute selectors and @media do not convert:
+   every widget names its classes and the breakpoints are layouts picked in
+   native/screens.ts (portrait phone, short landscape, compact). High
+   contrast (the old body.high-contrast palette), larger text and reduced
+   motion are the runtime's options; native/style.ts swaps the tokens. */
+
+:root {
+  --bg: #10131f;
+  --panel: #10131feb;
+  --panel-solid: #181c2e;
+  --text: #eef1f8;
+  --muted: #9aa3b8;
+  --accent: #ffc94d;
+  --accent-hover: #ffd772;
+  --accent-ink: #14100a;
+  --accent-2: #2f9e8f;
+  --danger: #ff5a3c;
+  --focus: #7fe7ff;
+  --line: #ffffff1a;
+  --edge: #ffffff2e;
+  --btn: #ffffff10;
+  --btn-hover: #ffffff20;
+  --card: #ffffff0c;
+  --card-edge: #ffffff22;
+  --track: #ffffff22;
+}
+
+* { box-sizing: border-box; }
+
+/* ------------------------------------------------------------- top bar */
+.topbar { background: var(--panel-solid); border-bottom: 1px solid var(--line); border-radius: 0; }
+.brand { color: var(--accent); font-size: 13.6px; font-weight: 800; letter-spacing: 2.4px; }
+.chip { background: #ffffff12; border-radius: 999px; padding: 3px 12px; }
+.chip-text { color: var(--muted); font-size: 12.8px; }
+.icon-btn {
+  min-width: 44px; min-height: 44px; padding: 4px 8px; border-radius: 10px; border: 1px solid #ffffff2a;
+  background: var(--panel); color: var(--text); font-size: 17.6px; text-align: center;
+}
+.icon-btn:hover { background: #262b44f0; }
+.icon-btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+/* ------------------------------------------------------------- HUD */
+.hud-rail { background: var(--panel); border-radius: 10px; padding: 10px 14px; }
+.hud-rail-small { background: var(--panel); border-radius: 10px; padding: 6px 10px; }
+.rail-heading { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; }
+.objective { color: var(--text); font-size: 15.2px; }
+.objective-small { color: var(--text); font-size: 12.8px; }
+.moves { color: var(--accent); font-size: 16px; font-weight: 700; }
+.stat-dt { color: var(--muted); font-size: 12.8px; }
+.stat-dd { color: var(--text); font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stat-score { color: var(--accent); font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stat-dd-small { color: var(--text); font-size: 13.6px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stat-score-small { color: var(--accent); font-size: 13.6px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tray-btn {
+  min-width: 64px; min-height: 64px; padding: 4px; border-radius: 16px; border: 1px solid #ffffff33;
+  background: var(--panel); color: var(--text); font-size: 24px; text-align: center;
+}
+.tray-btn:hover { background: #262b44f0; }
+.tray-btn:active { background: var(--accent); color: #000000; }
+.tray-btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.countdown { color: var(--accent); font-size: 144px; font-weight: 900; }
+
+/* ------------------------------------------------------------- screens */
+.screen-wash { background: linear-gradient(180deg, #0a0c16d1, #0a0c16f0); border-radius: 0; }
+.title-wash { background: linear-gradient(180deg, #0a0c16c7, #0a0c16f0), url(../assets/keyart-title.webp) center 62% / cover no-repeat, #10131f; border-radius: 0; }
+.title-plain { background: linear-gradient(180deg, #000000f5, #000000fa); border-radius: 0; }
+.overlay { background: #06080eb3; border-radius: 0; }
+.title { color: var(--accent); font-size: 72px; font-weight: 700; letter-spacing: 4px; }
+.title-small { color: var(--accent); font-size: 40px; font-weight: 700; letter-spacing: 2px; }
+.h2 { color: var(--accent); font-size: 32px; font-weight: 700; }
+.h2-small { color: var(--accent); font-size: 22px; font-weight: 700; }
+.h3 { color: var(--text); font-size: 18.7px; font-weight: 700; }
+.legend { color: var(--accent); font-size: 16px; font-weight: 600; }
+.body { color: var(--text); font-size: 16px; }
+.strong { color: var(--text); font-size: 16px; font-weight: 700; }
+.muted { color: var(--muted); font-size: 16px; }
+.small-muted { color: var(--muted); font-size: 13.3px; }
+.tagline { color: var(--muted); font-size: 16px; }
+.headline { color: var(--text); font-size: 20.8px; font-weight: 700; }
+.achievements { color: var(--accent-2); font-size: 16px; font-weight: 600; }
+.done-mark { color: var(--accent-2); font-size: 16px; font-weight: 700; }
+.facts-dt { color: var(--muted); font-size: 16px; }
+.facts-dd { color: var(--text); font-size: 16px; font-weight: 600; }
+
+/* ------------------------------------------------------------- buttons */
+.btn {
+  min-height: 44px; padding: 10px 20px; border-radius: 10px; border: 1px solid var(--edge);
+  background: var(--btn); color: var(--text); font-size: 16px; text-align: center;
+}
+.btn:hover { background: var(--btn-hover); }
+.btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.btn-primary {
+  min-height: 44px; padding: 10px 20px; border-radius: 10px; border: 1px solid var(--accent);
+  background: var(--accent); color: var(--accent-ink); font-size: 16px; font-weight: 700; text-align: center;
+}
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-primary:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.btn-danger {
+  min-height: 44px; padding: 10px 20px; border-radius: 10px; border: 1px solid var(--danger);
+  background: var(--btn); color: var(--danger); font-size: 16px; text-align: center;
+}
+.btn-danger:hover { background: var(--btn-hover); }
+.btn-danger:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.btn-small {
+  min-height: 36px; padding: 6px 14px; border-radius: 10px; border: 1px solid var(--edge);
+  background: var(--btn); color: var(--text); font-size: 13.6px; text-align: center;
+}
+.btn-small:hover { background: var(--btn-hover); }
+.btn-small.active { background: var(--accent); border: 1px solid var(--accent); color: var(--accent-ink); }
+.btn-small:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.btn-small-danger {
+  min-height: 36px; padding: 6px 14px; border-radius: 10px; border: 1px solid var(--danger);
+  background: var(--btn); color: var(--danger); font-size: 13.6px; text-align: center;
+}
+.btn-small-danger:hover { background: var(--btn-hover); }
+.btn-small-danger:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+/* ------------------------------------------------------------- journey grid, lists, cards */
+.stage-card {
+  min-height: 64px; border-radius: 10px; border: 1px solid var(--card-edge); background: var(--card);
+  color: var(--text); font-size: 16px; text-align: center;
+}
+.stage-card:hover { background: #ffffff1c; }
+.stage-card:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.stage-mastery {
+  min-height: 64px; border-radius: 10px; border: 1px solid var(--accent); background: var(--card);
+  color: var(--text); font-size: 16px; text-align: center;
+}
+.stage-mastery:hover { background: #ffffff1c; }
+.stage-mastery:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.stage-done {
+  min-height: 64px; border-radius: 10px; border: 1px solid var(--card-edge); background: #2f9e8f33;
+  color: var(--text); font-size: 16px; text-align: center;
+}
+.stage-done:hover { background: #2f9e8f4d; }
+.stage-done:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.stage-done-mastery {
+  min-height: 64px; border-radius: 10px; border: 1px solid var(--accent); background: #2f9e8f33;
+  color: var(--text); font-size: 16px; text-align: center;
+}
+.stage-done-mastery:hover { background: #2f9e8f4d; }
+.stage-done-mastery:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.stars { color: var(--accent); font-size: 12.8px; }
+.card {
+  border-radius: 12px; border: 1px solid var(--card-edge); background: var(--card); padding: 14px 16px;
+  color: var(--text); font-size: 16px; text-align: left;
+}
+.card:hover { background: #ffffff1c; }
+.card:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.help-card { border-radius: 12px; border: 1px solid var(--card-edge); background: var(--card); padding: 14px 16px; }
+.kbd { background: #ffffff1c; border: 1px solid #ffffff44; border-radius: 6px; padding: 2px 8px; }
+.kbd-text { color: var(--text); font-size: 16px; }
+.fieldset { border: 1px solid var(--card-edge); border-radius: 12px; padding: 12px 16px; }
+
+/* ------------------------------------------------------------- tables */
+.tr { border-bottom: 1px solid var(--line); padding: 8px 16px; border-radius: 0; }
+.tr-compact { border-bottom: 1px solid var(--line); padding: 6px 7px; border-radius: 0; }
+.tr-total { border-top: 2px solid var(--accent); border-bottom: 1px solid var(--line); padding: 8px 16px; border-radius: 0; }
+.emblem { background: url(../assets/token-emblem.webp) center / cover no-repeat, #0b0f3a; border-radius: 50%; }
+.th { color: var(--muted); font-size: 12.8px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+.td { color: var(--text); font-size: 16px; }
+.td-strong { color: var(--text); font-size: 16px; font-weight: 700; }
+.td-mine { color: var(--accent); font-size: 16px; }
+.td-total { color: var(--accent); font-size: 16px; font-weight: 800; }
+.td-small { color: var(--text); font-size: 13.6px; }
+.td-small-mine { color: var(--accent); font-size: 13.6px; }
+
+/* ------------------------------------------------------------- overlays */
+.panel { background: var(--panel-solid); border: 1px solid #ffffff2a; border-radius: 16px; padding: 28px; }
+.page { padding: 20px; }
+.toast { background: var(--panel-solid); border: 1px solid var(--accent-2); border-radius: 10px; padding: 10px 18px; }
+.toast-text { color: var(--text); font-size: 16px; font-weight: 600; }

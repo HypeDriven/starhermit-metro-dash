@@ -4,6 +4,8 @@
 // for offline play).
 
 const PREFIX = 'metro-dash:';
+// JSON copies (every document here is plain JSON; the engine's native interpreter has no structuredClone).
+const clone = (x) => JSON.parse(JSON.stringify(x));
 const DOC_VERSION = 1;
 
 function checksum(str) {
@@ -40,17 +42,17 @@ function writeRaw(key, value) {
 
 export function loadDoc(key, defaults) {
   const raw = readRaw(key);
-  if (!raw) return structuredClone(defaults);
+  if (!raw) return clone(defaults);
   try {
     const doc = JSON.parse(raw);
     if (doc.v !== DOC_VERSION || doc.checksum !== checksum(doc.payload)) {
       // corrupt or outdated: keep a backup, start fresh
       writeRaw(key + '.backup', raw);
-      return structuredClone(defaults);
+      return clone(defaults);
     }
-    return { ...structuredClone(defaults), ...JSON.parse(doc.payload) };
+    return { ...clone(defaults), ...JSON.parse(doc.payload) };
   } catch {
-    return structuredClone(defaults);
+    return clone(defaults);
   }
 }
 

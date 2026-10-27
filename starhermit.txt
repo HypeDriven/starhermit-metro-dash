@@ -1,11 +1,36 @@
 name=Metro Dash
 description=Dodge traffic, jump obstacles, and slide through hazards across three lanes of a neon transit route.
-launch=index.html
 owner=2712e04e-461b-4d23-81ae-e40b429128a8
 server=score-script.js
 cover=cover.jpg
+
+# StarHermit engine script game: one package, played natively by the
+# StarHermit client and in browsers by the engine's web runtime. Browsers open
+# launch=index.html, the loader `npm run package` writes (it pins the engine
+# on wiki.starhermit.com by hash; never edit it). Re-run `npm run package`
+# after every change and commit index.html + starhermit-files.json.
+launch=index.html
+engine.api=1
+engine.entry=native/main.ts
+engine.version=1.19.1
+engine.minor=20
+engine.capabilities=platform,storage,clipboard
+
+# Keyboard controls (players rebind keys and pads in the runtime's Options).
+# Touch screens swipe on the street (left / right change lane, up jumps,
+# down slides) or use the on-screen ◀ ▲ ▼ ▶ tray.
 control.left=ArrowLeft+KeyA | Move left
 control.right=ArrowRight+KeyD | Move right
 control.jump=ArrowUp+KeyW+Space | Jump
 control.slide=ArrowDown+KeyS | Slide
-control.pause=Escape+KeyP | Pause
+control.pause=Escape+KeyP | Pause / resume
+engine.group.left=Running
+engine.group.pause=Run
+
+# Gamepad defaults (the browser build's pad mapping): the D-pad or left stick
+# moves and jumps / slides, A jumps, B slides, Start pauses.
+engine.gamepad.left=DpadLeft+LeftStickLeft
+engine.gamepad.right=DpadRight+LeftStickRight
+engine.gamepad.jump=South+DpadUp+LeftStickUp
+engine.gamepad.slide=East+DpadDown+LeftStickDown
+engine.gamepad.pause=Start
