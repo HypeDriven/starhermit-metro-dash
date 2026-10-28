@@ -2,7 +2,7 @@
 // (tests/native/*.play): content.js's reference bot plays a stage with the
 // browser build's rules (js/rules.js) and its commands become timed key
 // lines, so the scripts replay the bot's runs exactly and check the final
-// score on the results. Timing (measured on the 1.19.1 render check, which
+// score on the results. Timing (measured on the 1.22.0 render check, which
 // plays one fixed step a frame at the rules' 30 Hz): after `click =Start` the
 // countdown takes 63 steps; a line after `frames F` that follows the click
 // acts in the frame whose rules tick (before stepping) is F − 61, and a
