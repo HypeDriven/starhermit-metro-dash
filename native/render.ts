@@ -23,7 +23,7 @@
 // minor 20 does only for a material's own map); the post chain (GTAOPass,
 // UnrealBloomPass threshold 0.92, the display-space GradeShader after the
 // output, FXAA / SMAA / MSAA) is renderer.ao / bloom / grade / antialias; the
-// sun's fitted shadow box is the engine's shadow `distance`; the big
+// sun's shadow box is render.js's, fitted around SHADOW_BOX as the sun sees it; the big
 // procedural canvases (asphalt, roughness, windows) are baked images
 // (tools/bake-textures.mjs) and the small ones are painted at start on the
 // engine's canvas. The 2D-canvas fallback for browsers without WebGL is gone
@@ -32,7 +32,7 @@
 import {
   ACESFilmicToneMapping, AdditiveBlending, BackSide, BoxGeometry, BufferAttribute, BufferGeometry, CanvasTexture, CapsuleGeometry, Color,
   CylinderGeometry, DirectionalLight, DynamicDrawUsage, FogExp2, Group, HemisphereLight, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial,
-  MeshLambertMaterial, MeshPhysicalMaterial, MeshStandardMaterial, PerspectiveCamera, PlaneGeometry, PMREMGenerator, Points, PointsMaterial,
+  MeshLambertMaterial, MeshPhysicalMaterial, MeshStandardMaterial, OrthographicCamera, PerspectiveCamera, PlaneGeometry, PMREMGenerator, Points, PointsMaterial,
   RepeatWrapping, RoomEnvironment, ShaderMaterial, SphereGeometry, SRGBColorSpace, TextureLoader, TorusGeometry, Vector3, renderer, scene,
   type Material, type Object3D, type Texture,
 } from "starhermit:scene";
@@ -46,6 +46,7 @@ const { LANE_WIDTH } = Rules;
 // Authored camera framing constants (render.js CAMERA).
 const CAMERA = { fov: 62, height: 8.2, back: 11.6, lookAhead: 18, lookHeight: 2.0, laneFollow: 0.42, springK: 42, shake: { crash: 0.55, dodge: 0.06 } };
 const SHADOW_TARGET = new Vector3(0, 0, -30);
+const SHADOW_BOX = { x: LANE_WIDTH * 1.5 + 4, yMax: 6, zNear: 14, zFar: -110 };
 const DAY_KEYS = [
   { p: 0.0, top: 0x2e3a67, bot: 0xf2a56b, sun: 1.5, hemi: 0.65, win: 0.8, fog: 0.007 }, // dawn
   { p: 0.28, top: 0x3f7fd0, bot: 0xbfe3f2, sun: 2.1, hemi: 0.95, win: 0.05, fog: 0.004 }, // day
@@ -68,13 +69,12 @@ scene.fog = fog;
 const background = new Color(0x2e3a67);
 scene.background = background;
 
-// -- lights: one dominant key + soft hemisphere fill (three.js r160 intensities ÷ π) -----------
-const sun = new DirectionalLight(0xffd9a0, 1.6 / PI);
+// -- lights: one dominant key + soft hemisphere fill (render.js's r160 intensities and shadow bias) --
+const sun = new DirectionalLight(0xffd9a0, 1.6);
 sun.shadow.bias = -0.0004;
-sun.shadow.normalBias = 1.5;
-sun.shadow.distance = 120;
+sun.shadow.normalBias = 0.04;
 sun.target.position.copy(SHADOW_TARGET);
-const hemi = new HemisphereLight(0xbfd4ff, 0x40352a, 0.7 / PI);
+const hemi = new HemisphereLight(0xbfd4ff, 0x40352a, 0.7);
 scene.add(sun, sun.target, hemi);
 
 // -- textures -------------------------------------------------------------------------------
@@ -485,6 +485,25 @@ function disposeTree(o: Object3D): void {
   });
 }
 
+const lookM = new Matrix4(), corner = new Vector3(), UP = new Vector3(0, 1, 0);
+/** render.js fitShadow: the sun's orthographic shadow camera fitted tightly around SHADOW_BOX as seen from the sun. */
+function fitShadow(): void {
+  lookM.lookAt(sun.position, sun.target.position, UP);
+  lookM.setPosition(sun.position);
+  lookM.invert();
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  for (const x of [-SHADOW_BOX.x, SHADOW_BOX.x]) for (const y of [0, SHADOW_BOX.yMax]) for (const z of [SHADOW_BOX.zNear, SHADOW_BOX.zFar]) {
+    corner.set(x, y, z).applyMatrix4(lookM);
+    minX = Math.min(minX, corner.x); maxX = Math.max(maxX, corner.x);
+    minY = Math.min(minY, corner.y); maxY = Math.max(maxY, corner.y);
+    minZ = Math.min(minZ, corner.z); maxZ = Math.max(maxZ, corner.z);
+  }
+  const c = sun.shadow.camera as OrthographicCamera;
+  c.left = minX; c.right = maxX; c.bottom = minY; c.top = maxY;
+  c.near = Math.max(0.5, -maxZ - 2); c.far = -minZ + 2;
+  c.updateProjectionMatrix();
+}
+
 // -- graphics, theme and options -----------------------------------------------------------------
 let shadowsFor: boolean | null = null;
 function applyShadows(): void {
@@ -591,8 +610,8 @@ function applyDayCycle(w: World, distance: number): void {
   fog.density = a.fog + (b.fog - a.fog) * t;
   const sunI = a.sun + (b.sun - a.sun) * t;
   const hemiI = a.hemi + (b.hemi - a.hemi) * t;
-  sun.intensity = sunI / PI;
-  hemi.intensity = hemiI / PI;
+  sun.intensity = sunI;
+  hemi.intensity = hemiI;
   const win = a.win + (b.win - a.win) * t;
   night = Math.max(0, Math.min(1, (win - 0.05) / 1.55));
   w.buildingMat.emissiveIntensity = win * 0.55;
@@ -605,6 +624,7 @@ function applyDayCycle(w: World, distance: number): void {
   sunDir.set(Math.cos(sunAngle) * 30, Math.max(6, Math.sin(sunAngle) * 34), -12).normalize();
   sun.position.copy(SHADOW_TARGET).addScaledVector(sunDir, 90);
   sun.color.setHex(phase > 0.6 && phase < 0.9 ? 0x9db4ff : 0xffd9a0);
+  if (sun.castShadow) fitShadow();
   (su.uSunDir!.value as Vector3).copy(sunDir);
   (su.uSunColor!.value as Color).copy(sun.color);
   su.uNight!.value = night;
