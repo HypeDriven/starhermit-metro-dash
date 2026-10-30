@@ -16,7 +16,7 @@ jump, or slide — one tick at a time.
 | Genre | Three-lane endless runner with authored campaign content |
 | Players | 1 (asynchronous competition via a shared daily seed and the platform's high-score board) |
 | Session length | 1–5 minutes per run; a journey stage is ~40–90 s |
-| Platforms | StarHermit engine script game (engine 1.29.0, host API 1.31, `engine.minor=31`): played natively by the StarHermit client and in browsers by the engine's web runtime; desktop, phones (portrait and landscape), gamepads |
+| Platforms | StarHermit engine script game (engine 1.30.0, host API 1.32, `engine.minor=32`): played natively by the StarHermit client and in browsers by the engine's web runtime; desktop, phones (portrait and landscape), gamepads |
 | Rendering | `starhermit:scene` (three.js r185-parity scene graph; the old build used three.js r160) and `starhermit:ui` / `starhermit:draw` for every screen and the HUD |
 | Simulation | Deterministic 30 tps rules (`js/rules.js`), one rules step per runtime fixed step (`setFixedRate(30)`); no wall clock inside the rules |
 | Persistence | The engine save (`starhermit:storage saves`: device + the player's cloud slot), the game's options as engine settings, interrupted-run snapshots in device storage |
@@ -25,7 +25,7 @@ jump, or slide — one tick at a time.
 
 | Path | Responsibility |
 |---|---|
-| `starhermit.txt` | Manifest: name, owner, server (`score-script.js`), cover, `launch=index.html`, `engine.*` (entry `native/main.ts`, version 1.29.0, minor 31, capabilities platform/storage/clipboard), the five actions with keyboard and gamepad defaults. |
+| `starhermit.txt` | Manifest: name, owner, server (`score-script.js`), cover, `launch=index.html`, `engine.*` (entry `native/main.ts`, version 1.30.0, minor 32, capabilities platform/storage/clipboard), the five actions with keyboard and gamepad defaults. |
 | `index.html`, `starhermit-files.json` | The engine's web loader and package file index, written by `npm run package` (`starhermit package --web .`); never edited by hand. |
 | `native/main.ts` | Entry module: flow state machine (title → mode screens → briefing → countdown → run ⇄ pause → results), input (actions, swipes, tray), rules events → sound/sparks/announcements, progression, achievements, local board, leaderboard posting, Practice rewind, "Welcome back" resume, the attract run, lifecycle. |
 | `native/screens.ts` | Every screen, the top bar, HUD, tray, countdown, pause and "Welcome back" dialogs, toasts on `starhermit:ui`; the layouts. |
