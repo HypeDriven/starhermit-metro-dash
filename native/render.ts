@@ -533,7 +533,8 @@ export function applyLook(next: Look): void {
     denoise: { lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: next.ao === "high" ? 6 : 4, rings: 2, samples: next.ao === "high" ? 16 : 8 },
   };
   // High threshold: only lamps, lit windows, beacons, tokens and neon glow.
-  renderer.bloom = next.bloom ? { strength: 0.45, radius: 0.45, threshold: 0.92, resolution: next.budget.bloomRes } : null;
+  // r160 page: minor 29 bloom follows r185 UnrealBloomPass, so the page's 0.45 is squared (0.20) to keep its look.
+  renderer.bloom = next.bloom ? { strength: 0.20, radius: 0.45, threshold: 0.92, resolution: next.budget.bloomRes } : null;
   renderer.antialias = next.antialias;
   if (!next.grade) renderer.grade = null;
   shadowsFor = null;
