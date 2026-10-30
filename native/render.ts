@@ -533,8 +533,8 @@ export function applyLook(next: Look): void {
     denoise: { lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: next.ao === "high" ? 6 : 4, rings: 2, samples: next.ao === "high" ? 16 : 8 },
   };
   // High threshold: only lamps, lit windows, beacons, tokens and neon glow.
-  // r160 page: minor 29 bloom follows r185 UnrealBloomPass, so the page's 0.45 is squared (0.20) to keep its look.
-  renderer.bloom = next.bloom ? { strength: 0.20, radius: 0.45, threshold: 0.92, resolution: next.budget.bloomRes } : null;
+  // fx.js: three r160 UnrealBloomPass(0.45, 0.45, 0.92), drawn by the r160 bloom model at the page's strength.
+  renderer.bloom = next.bloom ? { model: "r160", strength: 0.45, radius: 0.45, threshold: 0.92, resolution: next.budget.bloomRes } : null;
   renderer.antialias = next.antialias;
   if (!next.grade) renderer.grade = null;
   shadowsFor = null;
@@ -641,7 +641,8 @@ function applyDayCycle(w: World, distance: number): void {
     const k = night * 0.4;
     const nt = [1 - 0.1 * k, 1 - 0.05 * k, 1 + 0.1 * k];
     renderer.grade = {
-      space: "display", contrast: 0.11, saturation: 1.1, split: [0.2, 0.8],
+      space: "display", contrastCurve: "s", contrast: 0.22, saturation: 1.1, split: [0.2, 0.8],
+      levels: [0.97, 0.02], // s * 0.97 + 0.02
       shadows: [0.95 * nt[0]!, 0.98 * nt[1]!, 1.06 * nt[2]!], highlights: [1.04 * nt[0]!, 1.0 * nt[1]!, 0.95 * nt[2]!],
       vignette: { amount: 0.24, inner: 0.38, outer: 0.9, scale: [1.1, 1] },
     };
