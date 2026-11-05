@@ -513,7 +513,7 @@ function applyShadows(): void {
   shadowsFor = on;
   renderer.shadowMap.enabled = on;
   sun.castShadow = on;
-  if (on) sun.shadow.mapSize = look!.shadows;
+  if (on) sun.shadow.mapSize = look!.shadows; // the level's size (minor ≥ 23: the engine keeps what the game sets)
 }
 function applyReflections(): void {
   const w = world;
@@ -527,14 +527,15 @@ export function applyLook(next: Look): void {
   if (look && JSON.stringify(look) === JSON.stringify(next)) return;
   const before = look;
   look = next;
-  renderer.ao = next.ao === "off" ? null : {
-    blendIntensity: 0.7, radius: 0.9, distanceExponent: 1.4, thickness: 1.5, scale: 1.0, samples: next.ao === "high" ? 16 : 8, distanceFallOff: 1.0,
-    resolution: next.budget.aoRes,
-    denoise: { lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: next.ao === "high" ? 6 : 4, rings: 2, samples: next.ao === "high" ? 16 : 8 },
+  const ao = next.ao, fullAo = !!ao && ao.resolution >= 1; // the engine's AoQuality: below 1 = "on", from 1 = "high"
+  renderer.ao = ao && {
+    blendIntensity: 0.7, radius: 0.9, distanceExponent: 1.4, thickness: 1.5, scale: 1.0, samples: ao.samples, distanceFallOff: 1.0,
+    resolution: ao.resolution,
+    denoise: { lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: fullAo ? 6 : 4, rings: 2, samples: ao.denoiseSamples },
   };
   // High threshold: only lamps, lit windows, beacons, tokens and neon glow.
   // fx.js: three r160 UnrealBloomPass(0.45, 0.45, 0.92), drawn by the r160 bloom model at the page's strength.
-  renderer.bloom = next.bloom ? { model: "r160", strength: 0.45, radius: 0.45, threshold: 0.92, resolution: next.budget.bloomRes } : null;
+  renderer.bloom = next.bloom === null ? null : { model: "r160", strength: 0.45, radius: 0.45, threshold: 0.92, resolution: next.bloom };
   renderer.antialias = next.antialias;
   if (!next.grade) renderer.grade = null;
   shadowsFor = null;

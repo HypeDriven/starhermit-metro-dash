@@ -1,0 +1,18 @@
+# Bench scene: Journey stage 1 (fixed seed), the reference run through the city.
+# viewport 1366x768
+until 300 Metro Dash
+frames 30
+click =Journey
+until 60 mastery test
+frames 10
+click =Stage 1
+until 60 Expected
+frames 10
+save briefing
+click =Start
+frames 120
+measure start
+frames 449
+key ArrowUp 1
+frames 150
+measure stop

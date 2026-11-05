@@ -30,7 +30,7 @@ jump, or slide — one tick at a time.
 | `native/main.ts` | Entry module: flow state machine (title → mode screens → briefing → countdown → run ⇄ pause → results), input (actions, swipes, tray), rules events → sound/sparks/announcements, progression, achievements, local board, leaderboard posting, Practice rewind, "Welcome back" resume, the attract run, lifecycle. |
 | `native/screens.ts` | Every screen, the top bar, HUD, tray, countdown, pause and "Welcome back" dialogs, toasts on `starhermit:ui`; the layouts. |
 | `native/render.ts` | The city on `starhermit:scene`: street, towers, lamps, WGSL sky dome, day cycle, courier, obstacle and token pools, sparks and motes, spring camera, sun shadows, post effects per quality tier. |
-| `native/quality.ts` | The old presets and budgets keyed by the runtime's quality tier and level. |
+| `native/quality.ts` | The engine-owned effects from `levelSettings()`; the old art presets and budgets keyed by the level's tier. |
 | `native/audio.ts` | Authored one-shots on `starhermit:audio`; the ambience bed and four adaptive music layers rendered to looping clips. |
 | `native/platform.ts` | The save (merge, foreign-save migration), the game's options and legacy settings removal, player/invite/clock, score posting. |
 | `native/i18n.ts` | Locale from the runtime's interface language; `T`/`N`/`S`/`fmt`. |
@@ -393,17 +393,19 @@ follow the old build at r160; reflections come from a prefiltered `RoomEnvironme
 material as its own `envMap` with the old per-material `envMapIntensity` × daylight (r160 scaled the scene
 environment by each material; three.js r163+, as the engine, does that only for a material's own map).
 
-The runtime's quality tier (Options › Graphics: Auto from the device's graphics level, or a level) picks the
-old preset's look:
+The runtime's quality tier (Options › Graphics: Auto from the device's graphics level, or a level) sets the look:
+shadows and their map size, AO, bloom, the grade and anti-aliasing are the level's own (`levelSettings()`, the
+engine's table every StarHermit game reads; the table shows each tier's anchor level, and levels above an anchor
+raise them); the art follows the old preset:
 
 | Tier | Shadows | AO | Bloom | Grade | AA | Reflections | Particles | City detail | Materials | Towers/side |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Low | off | off | off | off | MSAA | off | low | plain | Lambert | 10 |
-| Balanced | 1024 | off | on | on | FXAA | on | high | detailed | Standard | 16 |
-| High | 2048 | on | on | on | SMAA | on | high | detailed | Physical | 24 |
-| Ultra | 4096 | high | on | on | MSAA | on | high | detailed | Physical | 32 |
+| Low | off | off | off | off | off | off | low | plain | Lambert | 10 |
+| Balanced | 1024 | off | on, ½ res | on | FXAA | on | high | detailed | Standard | 16 |
+| High | 2048 | on, ½ res | on, ½ res | on | SMAA | on | high | detailed | Physical | 24 |
+| Ultra | 4096 | full res | on, full res | on | MSAA | on | high | detailed | Physical | 32 |
 
-Sparks (600–4 000) and motes (80–400) scale up to 2× with the level inside a tier. Bloom: strength 0.45,
+Sparks (600–4 000) and motes (80–400) scale up to 2× with the level's particle budget over the tier's anchor. Bloom: strength 0.45,
 radius 0.45, threshold 0.92 (lamps, windows, beacons, tokens, neon strip). Grade (fx.js GradeShader, display
 space after the output): contrast 0.11 (the old 0.22 S-curve weight), saturation 1.1, cool shadows / warm
 highlights, a bluer cast at night, a 0.24 vignette. City detail adds the baked asphalt (1024 px; the runtime
