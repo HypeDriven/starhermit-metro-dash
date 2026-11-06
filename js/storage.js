@@ -36,7 +36,9 @@ function readRaw(key) {
   return memoryFallback.get(key) ?? null;
 }
 function writeRaw(key, value) {
-  if (hasStorage) localStorage.setItem(PREFIX + key, value);
+  if (hasStorage) {
+    try { localStorage.setItem(PREFIX + key, value); } catch (e) { console.warn(`storage ${key}: ${String(e)}`); }
+  }
   else memoryFallback.set(key, value);
 }
 

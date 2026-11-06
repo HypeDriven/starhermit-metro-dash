@@ -8,18 +8,21 @@
 // intensity 0.15 and on every step from 0.6, a hi-hat tick from 0.45; the
 // intensity follows the run's speed). The browser build ran the ambience and
 // the music live (a noise loop and oscillators on an interval); here they are
-// rendered once into clips (createClip, a slice a frame) and looped on the
-// music bus, each music layer's level set by the intensity (the runtime has no
+// rendered once offline at start (OfflineAudioContext, one context a stem) and
+// looped on the music bus, each music layer's level set by the intensity (the runtime has no
 // ambience bus: the bed's gain folds in the old ambience slider's 50 % against
 // music's 70 %). The runtime's Options own the volumes and the voice limit;
-// the top bar's ♪ button mutes the game's sound for the session, as before.
+// the top bar's ♪ button mutes the game for the session (the engine's setMuted).
 // UI taps play on the "interface" bus, the rest on "effects". The oscillator
 // blips the browser build synthesized while a sample decoded are not ported
 // (a live synthesis graph makes clip loads fail on the engine's web runtime),
 // so a clip still loading is silent. Every clip loads at once in onStart; the
-// rendered loops start once the mixer runs (natively at once, in a browser
+// rendered loops play once the mixer runs (natively at once, in a browser
 // after the first press).
-import { context, createClip, loadClip, play as playClip, type AudioClip, type Sound } from "starhermit:audio";
+import { context, createClip, type GainNode, isMuted, loadClip, OfflineAudioContext, play as playClip, setMuted, type AudioClip, type Sound } from "starhermit:audio";
+import { createRandom } from "starhermit:engine";
+
+export { isMuted, setMuted };
 
 const SFX_BY_EVENT: Record<string, string> = {
   lane: "lane-switch", jump: "jump", slide: "slide", coin: "token-pickup", dodge: "near-miss", invalid: "invalid-move", crash: "crash",
@@ -27,18 +30,18 @@ const SFX_BY_EVENT: Record<string, string> = {
 };
 const clips = new Map<string, AudioClip>();
 let suspended = false;
-let muted = false;
 
 /** Loads every clip at once (onStart); a cue whose clip is still loading is skipped. */
 export function loadSfx(): void {
   for (const name of new Set(Object.values(SFX_BY_EVENT))) {
     loadClip(`sfx/${name}.opus`).then((c) => { clips.set(name, c); }, (e: unknown) => console.warn(`sfx ${name}: ${String(e)}`));
   }
+  renderLoops().catch((e: unknown) => console.warn(`audio: ${String(e)}`));
 }
 
 /** audio.js event(type): the event's authored clip. */
 export function event(type: string): void {
-  if (suspended || muted) return;
+  if (suspended) return;
   const file = SFX_BY_EVENT[type];
   if (!file) return;
   const clip = clips.get(file);
@@ -49,84 +52,95 @@ export function event(type: string): void {
 
 // -- the rendered loops ----------------------------------------------------------------------
 const RATE = 22050;
-let seed = 0x3a7;
-function rnd(): number {
-  seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
-  let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-  t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
-  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-}
-/** audio.js _tone's envelope: 5 ms linear attack, exponential fall to 0.0001 by `dur`. */
-function env(t: number, dur: number, gain: number): number {
-  if (t < 0 || t > dur) return 0;
-  if (t < 0.005) return (gain * t) / 0.005;
-  return gain * Math.pow(0.0001 / gain, (t - 0.005) / Math.max(0.001, dur - 0.005));
-}
-const tri = (ph: number): number => (ph < 0.5 ? 4 * ph - 1 : 3 - 4 * ph);
-const sq = (ph: number): number => (ph < 0.5 ? 1 : -1);
-
-// The ambience: a 2 s noise loop through a one-pole 400 Hz lowpass, run twice so it joins without a click.
-const AMB_N = RATE * 2;
-const amb = new Float32Array(AMB_N);
-let ambPos = 0, ambY = 0;
-function renderAmbience(count: number): boolean {
-  const k = 1 - Math.exp((-2 * Math.PI * 400) / RATE);
-  const end = Math.min(2 * AMB_N, ambPos + count);
-  for (; ambPos < end; ambPos++) {
-    const i = ambPos % AMB_N;
-    if (ambPos < AMB_N) amb[i] = rnd() * 2 - 1;
-    ambY += k * (amb[i]! - ambY);
-    if (ambPos >= AMB_N) amb[i] = ambY;
-  }
-  return ambPos >= 2 * AMB_N;
-}
-
-// The music: 32 steps of 150 ms (4.8 s), one array a layer.
-const STEP = 0.15, STEPS = 32, MUS_N = Math.round(RATE * STEP * STEPS);
+const STEP = 0.15, STEPS = 32, LOOP = STEP * STEPS;
 const SCALE = [0, 3, 5, 7, 10, 12, 15];
 const ROOT = 110;
 const ARP_GAIN = 0.1, HAT_GAIN = 0.08;
-const notes = Array.from({ length: STEPS }, () => SCALE[Math.floor(rnd() * SCALE.length)]!);
-const layers = { bass: new Float32Array(MUS_N), even: new Float32Array(MUS_N), odd: new Float32Array(MUS_N), hat: new Float32Array(MUS_N) };
-const hatNoise = new Float32Array(Math.round(RATE * 0.04) + 1).map(() => rnd() * 2 - 1);
-let musPos = 0;
-function renderMusic(count: number): boolean {
-  const end = Math.min(MUS_N, musPos + count);
-  for (; musPos < end; musPos++) {
-    const t = musPos / RATE;
-    let bass = 0, even = 0, odd = 0, hat = 0;
-    // a step's tone still sounding from the step before (the bass rings 220 ms) wraps round the loop
-    for (const back of [0, 1, 2]) {
-      const s = (Math.floor(t / STEP) - back + STEPS) % STEPS;
-      const local = t - Math.floor(t / STEP) * STEP + back * STEP;
-      const beat = s % 8;
-      if (beat === 0 || beat === 4) bass += tri(((local * ROOT) / 2) % 1) * env(local, 0.22, 0.2);
-      const f = ROOT * Math.pow(2, notes[s]! / 12) * 2;
-      const a = sq((local * f) % 1) * env(local, 0.12, ARP_GAIN);
-      if (beat % 2 === 0) even += a; else odd += a;
-      if (back === 0) {
-        const i = Math.floor(local * RATE);
-        if (i < hatNoise.length) hat += hatNoise[i]! * env(local, 0.04, HAT_GAIN);
-      }
-    }
-    layers.bass[musPos] = bass; layers.even[musPos] = even; layers.odd[musPos] = odd; layers.hat[musPos] = hat;
+// Measured against the old script renders (rms): the band-limited square reads 1.5 dB under the old naive one; the biquad highpass 8.8 dB over the old one-pole.
+const ARP_MAKEUP = 1.19, HAT_MAKEUP = 0.364;
+const rng = createRandom(0x3a7, { algorithm: "mulberry32" });
+const notes = Array.from({ length: STEPS }, () => SCALE[Math.floor(rng.float() * SCALE.length)]!);
+
+/** audio.js _tone's envelope: 5 ms linear attack, exponential fall to 0.0001 by `dur`. */
+function envelope(g: GainNode["gain"], t: number, dur: number, gain: number): void {
+  g.setValueAtTime(0, t);
+  g.linearRampToValueAtTime(gain, t + 0.005);
+  g.exponentialRampToValueAtTime(0.0001, t + dur);
+  g.setValueAtTime(0, t + dur);
+}
+function tone(off: OfflineAudioContext, type: "triangle" | "square", freq: number, t: number, dur: number, gain: number): void {
+  const osc = off.createOscillator();
+  osc.type = type;
+  osc.frequency.value = freq;
+  const g = off.createGain();
+  g.gain.value = 0;
+  envelope(g.gain, t, dur, gain);
+  osc.connect(g).connect(off.destination);
+  osc.start(t);
+  osc.stop(t + dur);
+}
+async function clipOf(off: OfflineAudioContext, skip = 0): Promise<AudioClip> {
+  const r = await off.startRendering();
+  return createClip([r.getChannelData(0).slice(skip)], RATE);
+}
+/** The ambience: a 2 s noise loop lowpassed at 400 Hz (periodic once the filter settles, so it joins without a click). */
+function renderAmbience(): Promise<AudioClip> {
+  const settle = Math.round(0.25 * RATE);
+  const off = new OfflineAudioContext(1, settle + RATE * 2, RATE);
+  const noise = off.createNoise({ seed: 0x3a7, seconds: 2 });
+  const lp = off.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = 400;
+  noise.connect(lp).connect(off.destination);
+  noise.start();
+  return clipOf(off, settle);
+}
+/** The arpeggio's tones on even or odd beats of the 32 steps, or the bass on beats 1 and 5 of 8. */
+function renderTones(pick: (beat: number) => boolean, tones: (off: OfflineAudioContext, step: number, t: number) => void): Promise<AudioClip> {
+  const off = new OfflineAudioContext(1, Math.round(RATE * LOOP), RATE);
+  for (let s = 0; s < STEPS; s++) if (pick(s % 8)) tones(off, s, s * STEP);
+  return clipOf(off);
+}
+/** A 40 ms noise tick on every step, highpassed at 6 kHz (audio.js _noise highpass). */
+function renderHat(): Promise<AudioClip> {
+  const off = new OfflineAudioContext(1, Math.round(RATE * LOOP), RATE);
+  const tick = off.createNoiseBuffer(0.04, "white", { seed: 0x3a8 });
+  const hp = off.createBiquadFilter();
+  hp.type = "highpass";
+  hp.frequency.value = 6000;
+  const g = off.createGain();
+  g.gain.value = 0;
+  for (let s = 0; s < STEPS; s++) {
+    const src = off.createBufferSource();
+    src.buffer = tick;
+    src.connect(hp);
+    src.start(s * STEP);
+    envelope(g.gain, s * STEP, 0.04, HAT_GAIN * HAT_MAKEUP);
   }
-  if (musPos >= MUS_N) {
-    // a one-pole highpass at 6 kHz on the hat layer (audio.js _noise highpass)
-    const k = Math.exp((-2 * Math.PI * 6000) / RATE);
-    let px = 0, py = 0;
-    for (let i = 0; i < MUS_N; i++) { const x = layers.hat[i]!; py = k * (py + x - px); px = x; layers.hat[i] = py; }
-    return true;
-  }
-  return false;
+  hp.connect(g).connect(off.destination);
+  return clipOf(off);
 }
 
+type Layer = "bass" | "even" | "odd" | "hat";
 let ambClip: AudioClip | null = null;
-const music: Record<keyof typeof layers, AudioClip | null> = { bass: null, even: null, odd: null, hat: null };
+let music: Record<Layer, AudioClip> | null = null;
 let ambVoice: Sound | null = null;
-let musicVoices: Record<keyof typeof layers, Sound> | null = null;
+let musicVoices: Record<Layer, Sound> | null = null;
 let musicOn = false;
 let intensity = 0;
+
+async function renderLoops(): Promise<void> {
+  const arp = (off: OfflineAudioContext, s: number, t: number): void => tone(off, "square", ROOT * Math.pow(2, notes[s]! / 12) * 2, t, 0.12, ARP_GAIN * ARP_MAKEUP);
+  const [amb, bass, even, odd, hat] = await Promise.all([
+    renderAmbience(),
+    renderTones((beat) => beat === 0 || beat === 4, (off, _s, t) => tone(off, "triangle", ROOT / 2, t, 0.22, 0.2)),
+    renderTones((beat) => beat % 2 === 0, arp),
+    renderTones((beat) => beat % 2 === 1, arp),
+    renderHat(),
+  ]);
+  ambClip = amb;
+  music = { bass, even, odd, hat };
+}
 
 /** audio.js setIntensity: 0..1, from the run's speed. */
 export function setIntensity(v: number): void { intensity = Math.max(0, Math.min(1, v)); }
@@ -134,12 +148,9 @@ export function startMusic(): void { musicOn = true; }
 export function stopMusic(): void { musicOn = false; }
 /** Pause and a hidden window: everything quiet (audio.js suspend / resume). */
 export function setSuspended(on: boolean): void { suspended = on; }
-/** The top bar's ♪ toggle (audio.js setMuted). */
-export function setMuted(on: boolean): void { muted = on; }
-export function isMuted(): boolean { return muted; }
 
-function levels(): Record<keyof typeof layers, number> {
-  const on = musicOn && !suspended && !muted;
+function levels(): Record<Layer, number> {
+  const on = musicOn && !suspended;
   const arp = (0.05 + intensity * 0.05) / ARP_GAIN;
   return {
     bass: on ? 1 : 0,
@@ -151,36 +162,24 @@ function levels(): Record<keyof typeof layers, number> {
 
 /** Each frame, once the mixer runs: the loops, then their levels. */
 export function update(): void {
-  if (context.state !== "running") return;
-  if (!ambClip) {
-    if (!renderAmbience(8000)) return;
-    try { ambClip = createClip([amb], RATE); } catch (e) { console.warn(`audio: ${String(e)}`); ambPos = 0; }
-    return;
-  }
+  if (context.state !== "running" || !ambClip || !music) return;
   if (!ambVoice) {
     try { ambVoice = playClip(ambClip, { bus: "music", gain: 0, loop: true }); } catch { ambVoice = null; }
-    return;
-  }
-  if (!music.hat) {
-    if (!renderMusic(6000)) return;
-    for (const k of Object.keys(layers) as (keyof typeof layers)[]) {
-      try { music[k] = createClip([layers[k]], RATE); } catch (e) { console.warn(`audio: ${String(e)}`); }
-    }
     return;
   }
   if (!musicVoices) {
     // all four layers start together (one frame) so they stay in step
     try {
       musicVoices = {
-        bass: playClip(music.bass!, { bus: "music", gain: 0, loop: true }), even: playClip(music.even!, { bus: "music", gain: 0, loop: true }),
-        odd: playClip(music.odd!, { bus: "music", gain: 0, loop: true }), hat: playClip(music.hat!, { bus: "music", gain: 0, loop: true }),
+        bass: playClip(music.bass, { bus: "music", gain: 0, loop: true }), even: playClip(music.even, { bus: "music", gain: 0, loop: true }),
+        odd: playClip(music.odd, { bus: "music", gain: 0, loop: true }), hat: playClip(music.hat, { bus: "music", gain: 0, loop: true }),
       };
     } catch { musicVoices = null; }
     return;
   }
   try {
-    ambVoice.fade(suspended || muted ? 0 : 0.043, 0.15);
+    ambVoice.fade(suspended ? 0 : 0.043, 0.15);
     const lv = levels();
-    for (const k of Object.keys(lv) as (keyof typeof layers)[]) musicVoices[k].fade(lv[k], 0.12);
+    for (const k of Object.keys(lv) as Layer[]) musicVoices[k].fade(lv[k], 0.12);
   } catch { /* the mixer restarted */ }
 }

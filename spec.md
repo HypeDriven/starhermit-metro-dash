@@ -42,7 +42,7 @@ jump, or slide — one tick at a time.
 | `js/session.js` | One run: command queue, replay log, periodic hashes, pause/snapshot/restore, checkpoints (unchanged; stepped once per fixed step). |
 | `js/storage.js` | Snapshot keys, achievement unlocks, the local board insert and tie-break comparator (JSON clones instead of `structuredClone`). |
 | `js/save.js` | The save document: normalize, merge, foreign (old cloud mirror) reading, the game's options, legacy KV keys. |
-| `js/strings.js`, `js/i18n.js`, `js/lang.js`, `js/sh-strings.js` | Translation tables (English keys, nine locales), the lookup core (`MDI18N`), the content's `T`/`N`, the account strings. |
+| `assets/strings.json`, `js/lang.js` | Translation tables (English keys, nine locales; the account lines are the engine's `starhermit.*`), the content's `T` (over `native/i18n.ts`'s engine strings). |
 | `js/rng.js` | `fnv1a` and the mulberry32 `Rng`. |
 | `score-script.js` | StarHermit platform script (`server=`): range-checks a finished run's score and posts it to the `high-score` leaderboard. |
 | `assets/` | Title key art, results token emblem, `ui-style.json` (from `tools/ui-style.css`), `textures/` (baked asphalt, roughness and window maps). |
@@ -422,10 +422,10 @@ invalid move, crash, objective, countdown beep, go signal, UI tap, achievement, 
 play on the runtime's *interface* bus, the rest on *effects*. The ambience bed (white noise lowpassed at
 400 Hz) and the adaptive music (a 55 Hz triangle bass on beats 1 and 5 of 8 at 150 ms steps; a square-wave
 arpeggio of seeded A-minor-pentatonic notes on even steps from intensity 0.15 and on every step from 0.6; a
-6 kHz hi-hat tick from 0.45; intensity = (speed − 2) / 5) are rendered once into clips and looped on the
+6 kHz hi-hat tick from 0.45; intensity = (speed − 2) / 5) are rendered once offline at start and looped on the
 *music* bus, each music layer faded to its level; the music runs from GO to the run's end. Pause and a hidden
 window silence everything. Volumes, mute and the voice limit are the runtime's Options; the ♪ button mutes the
-game for the session. Clips load once the mixer runs, one at a time; a clip still loading is silent.
+game for the session. Clips load at once at start; a clip still loading is silent.
 
 ---
 
@@ -434,8 +434,8 @@ game for the session. Clips load once the mixer runs, one at a time; a clip stil
 Nine locales: en-US, en-GB, es-419, es-ES, de-DE, fr-FR, fr-CA, pt-BR, it-IT. The locale is the runtime's
 interface language (Options › Language, else the account's preferred language, else the device's), mapped to
 the nearest shipped locale (`native/i18n.ts pickLocale`); a change shows on the next frame without touching the
-run. Strings are English keys in `js/strings.js` (en-GB, es-ES, fr-CA carry only their differences), the account
-lines in `js/sh-strings.js`. Numbers use the locale's digit grouping; dates on the Scores board the locale's
+run. Strings are English keys in `assets/strings.json` (en-GB, es-ES, fr-CA carry only their differences), the account
+lines the engine's `starhermit.*`. Numbers use the locale's digit grouping; dates on the Scores board the locale's
 format. The rules' reasons in `Not now: <reason>` stay the rules' identifiers, as before.
 
 ---

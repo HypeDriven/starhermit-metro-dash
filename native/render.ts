@@ -35,10 +35,12 @@ import {
   MeshLambertMaterial, MeshPhysicalMaterial, MeshStandardMaterial, OrthographicCamera, PerspectiveCamera, PlaneGeometry, PMREMGenerator, Points, PointsMaterial,
   RepeatWrapping, RoomEnvironment, ShaderMaterial, SphereGeometry, SRGBColorSpace, TextureLoader, TorusGeometry, Vector3, renderer, scene,
   type Material, type Object3D, type Texture,
+  ParticleEmitter,
 } from "starhermit:scene";
+import { createRandom } from "starhermit:engine";
 import { OffscreenCanvas, type OffscreenCanvasRenderingContext2D } from "starhermit:canvas";
 import { Content, Rules, type RulesEvent, type State } from "./game.ts";
-import { MOTE_MAX, SPARK_MAX, type Look } from "./quality.ts";
+import { MOTE_MAX, type Look } from "./quality.ts";
 
 const PI = Math.PI;
 const { LANE_WIDTH } = Rules;
@@ -196,7 +198,7 @@ interface World {
   lamps: InstancedMesh; lampGlows: InstancedMesh; lampGlowMat: MeshBasicMaterial; pools: InstancedMesh; poolMat: MeshBasicMaterial;
   player: Group; board: Mesh; strip: Mesh; hover: Mesh; hoverMat: MeshBasicMaterial;
   obstacles: Record<"barrier" | "sign" | "block", Group[]>; blinkMat: MeshBasicMaterial; coins: Mesh[];
-  sparks: Points; sparkMat: PointsMaterial; motes: Points; moteMat: PointsMaterial;
+  sparks: Record<SparkKind, ParticleEmitter>; motes: Points; moteMat: PointsMaterial;
 }
 let world: World | null = null;
 let look: Look | null = null;
@@ -226,25 +228,17 @@ function mat(p: MatParams, physical = false): Std {
   return new MeshStandardMaterial({ ...base, roughness, metalness, roughnessMap });
 }
 
-const SPARK_POS = new Float32Array(SPARK_MAX * 3);
-const SPARK_VEL = new Float32Array(SPARK_MAX * 3);
-const SPARK_LIFE = new Float32Array(SPARK_MAX);
-let sparkHead = 0;
-let sparkCap = PARTICLE_LOW;
+/** The three spark effects: colour and the spread of their velocities (x, z ± spread / 2; y 0 to 0.8 × spread). */
+const SPARKS = { coin: { color: 0xffc94d, spread: 4 }, crash: { color: 0xff5a3c, spread: 9 }, goal: { color: 0x7fe7ff, spread: 7 } };
+type SparkKind = keyof typeof SPARKS;
 const MOTE_BASE = new Float32Array(MOTE_MAX * 3);
 {
   // ambient city motes (render.js moteRng 0x3073): a mulberry32 stream
-  let s = 0x3073;
-  const next = (): number => {
-    let t = (s += 0x6d2b79f5);
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
+  const r = createRandom(0x3073, { algorithm: "mulberry32" });
   for (let i = 0; i < MOTE_MAX; i++) {
-    MOTE_BASE[i * 3] = (next() - 0.5) * 34;
-    MOTE_BASE[i * 3 + 1] = 0.6 + next() * 5.5;
-    MOTE_BASE[i * 3 + 2] = next() * 140;
+    MOTE_BASE[i * 3] = (r.float() - 0.5) * 34;
+    MOTE_BASE[i * 3 + 1] = 0.6 + r.float() * 5.5;
+    MOTE_BASE[i * 3 + 2] = r.float() * 140;
   }
 }
 
@@ -445,20 +439,23 @@ function buildWorld(): World {
   }
 
   // sparks: pooled, bounded, event-tiered; motes drifting past with the run (particles high)
-  const sparkGeo = new BufferGeometry();
-  sparkGeo.setAttribute("position", new BufferAttribute(SPARK_POS, 3));
-  const sparkMat = new PointsMaterial({ color: 0xffc94d, size: 0.45, map: glowTex, transparent: true, opacity: 0.95, depthWrite: false, sizeAttenuation: true });
-  const sparks = new Points(sparkGeo, sparkMat);
-  sparks.frustumCulled = false;
+  const sparkMat = new PointsMaterial({ size: 0.45, map: glowTex, transparent: true, opacity: 0.95, depthWrite: false, sizeAttenuation: true });
+  const sparkCap = L.particles === "high" ? L.budget.sparks : PARTICLE_LOW;
+  const spark = ({ color, spread }: { color: number; spread: number }, seed: number): ParticleEmitter => {
+    const e = new ParticleEmitter({ capacity: sparkCap, material: sparkMat, seed, space: "local", color, life: 0.625, gravity: [0, -9, 0],
+      velocity: [0, spread * 0.4, 0], velocitySpread: [spread / 2, spread * 0.4, spread / 2] });
+    e.frustumCulled = false;
+    root.add(e);
+    return e;
+  };
+  const sparks: Record<SparkKind, ParticleEmitter> = { coin: spark(SPARKS.coin, 1), crash: spark(SPARKS.crash, 2), goal: spark(SPARKS.goal, 3) };
   const moteGeo = new BufferGeometry();
   moteGeo.setAttribute("position", new BufferAttribute(new Float32Array(MOTE_MAX * 3), 3));
   moteGeo.setDrawRange(0, Math.min(MOTE_MAX, L.budget.motes));
   const moteMat = new PointsMaterial({ color: 0xffe2b0, size: 0.11, transparent: true, opacity: 0.5, sizeAttenuation: true, blending: AdditiveBlending, depthWrite: false, map: glowTex });
   const motes = new Points(moteGeo, moteMat);
   motes.frustumCulled = false;
-  root.add(sparks, motes);
-  sparkCap = L.particles === "high" ? L.budget.sparks : PARTICLE_LOW;
-  for (let i = sparkCap; i < SPARK_MAX; i++) SPARK_LIFE[i] = 0;
+  root.add(motes);
 
   const envMats: [Std, number][] = [
     [groundMat, 0.5], [buildingMat, 0.35], [lampMat, 0.8], [curbMat, 0.4], [bodyMat, 0.7], [trimMat, 1], [boardMat, 1], [postMat, 0.9],
@@ -467,7 +464,7 @@ function buildWorld(): World {
   scene.add(root);
   return {
     root, groundMat, buildingMat, bodyMat, coinMat, envMats, detailGroup, buildings, beacons, buildingData, lamps, lampGlows, lampGlowMat, pools, poolMat,
-    player, board, strip, hover, hoverMat, obstacles, blinkMat, coins, sparks, sparkMat, motes, moteMat,
+    player, board, strip, hover, hoverMat, obstacles, blinkMat, coins, sparks, motes, moteMat,
   };
 }
 
@@ -543,7 +540,7 @@ export function applyLook(next: Look): void {
   const b = before?.budget, nb = next.budget;
   if (!world || !b || b.material !== nb.material || before!.detailed !== next.detailed || b.buildings !== nb.buildings
     || b.motes !== nb.motes || b.sparks !== nb.sparks || before!.particles !== next.particles) {
-    if (world) { scene.remove(world.root); disposeTree(world.root); }
+    if (world) { for (const e of Object.values(world.sparks)) e.dispose(); scene.remove(world.root); disposeTree(world.root); }
     world = buildWorld();
     applyPalette();
   }
@@ -571,27 +568,16 @@ export function setActive(on: boolean): void { renderer.camera = on ? camera : n
 
 // -- events and the frame -------------------------------------------------------------------------
 let shake = 0;
-function spawnSparks(x: number, y: number, z: number, n: number, spread: number, color: number): void {
-  const w = world;
-  if (!w) return;
-  if (reducedMotion) n = Math.min(n, 4);
-  w.sparkMat.color.setHex(color);
-  for (let i = 0; i < n; i++) {
-    const idx = sparkHead++ % sparkCap;
-    SPARK_POS[idx * 3] = x; SPARK_POS[idx * 3 + 1] = y; SPARK_POS[idx * 3 + 2] = z;
-    SPARK_VEL[idx * 3] = (Math.random() - 0.5) * spread;
-    SPARK_VEL[idx * 3 + 1] = Math.random() * spread * 0.8;
-    SPARK_VEL[idx * 3 + 2] = (Math.random() - 0.5) * spread;
-    SPARK_LIFE[idx] = 1;
-  }
+function spawnSparks(kind: SparkKind, x: number, y: number, z: number, n: number): void {
+  world?.sparks[kind].burst(reducedMotion ? Math.min(n, 4) : n, [x, y, z]);
 }
 /** render.js handleEvents: sparks on tokens, the crash and the objective; the crash and near-miss shake. */
 export function handleEvents(events: RulesEvent[], state: State): void {
   for (const e of events) {
-    if (e.type === "coin") spawnSparks((e.lane ?? 0) * LANE_WIDTH, 1.4, -2, 10, 4, 0xffc94d);
-    else if (e.type === "crash") { shake = reducedMotion ? 0 : CAMERA.shake.crash; spawnSparks(state.lane * LANE_WIDTH, 1.5, -2, 60, 9, 0xff5a3c); }
+    if (e.type === "coin") spawnSparks("coin", (e.lane ?? 0) * LANE_WIDTH, 1.4, -2, 10);
+    else if (e.type === "crash") { shake = reducedMotion ? 0 : CAMERA.shake.crash; spawnSparks("crash", state.lane * LANE_WIDTH, 1.5, -2, 60); }
     else if (e.type === "dodge" && !reducedMotion) shake = Math.max(shake, CAMERA.shake.dodge);
-    else if (e.type === "goal") spawnSparks(state.lane * LANE_WIDTH, 2, -4, 80, 7, 0x7fe7ff);
+    else if (e.type === "goal") spawnSparks("goal", state.lane * LANE_WIDTH, 2, -4, 80);
   }
 }
 
@@ -773,19 +759,6 @@ export function update(state: State | null, alpha: number, dtIn: number, time: n
   w.lampGlows.instanceMatrix.needsUpdate = true;
   if (detailed) w.pools.instanceMatrix.needsUpdate = true;
 
-  // sparks
-  let alive = false;
-  for (let i = 0; i < sparkCap; i++) {
-    if (SPARK_LIFE[i]! <= 0) { SPARK_POS[i * 3 + 1] = -100; continue; }
-    alive = true;
-    SPARK_LIFE[i] = SPARK_LIFE[i]! - dt * 1.6;
-    SPARK_POS[i * 3] = SPARK_POS[i * 3]! + SPARK_VEL[i * 3]! * dt;
-    SPARK_POS[i * 3 + 1] = SPARK_POS[i * 3 + 1]! + SPARK_VEL[i * 3 + 1]! * dt;
-    SPARK_POS[i * 3 + 2] = SPARK_POS[i * 3 + 2]! + SPARK_VEL[i * 3 + 2]! * dt;
-    SPARK_VEL[i * 3 + 1] = SPARK_VEL[i * 3 + 1]! - 9 * dt;
-  }
-  w.sparks.geometry.setDrawRange(0, sparkCap);
-  if (alive || sparkFresh) { w.sparks.geometry.getAttribute("position")!.needsUpdate = true; sparkFresh = alive; }
   w.motes.visible = look.particles === "high" && !still;
   if (w.motes.visible) {
     const pos = w.motes.geometry.getAttribute("position")!;
@@ -821,4 +794,3 @@ export function update(state: State | null, alpha: number, dtIn: number, time: n
   if (Math.abs(camera.fov - targetFov) > 0.1) camera.fov += (targetFov - camera.fov) * Math.min(1, dt * 3);
   camera.updateProjectionMatrix();
 }
-let sparkFresh = false;

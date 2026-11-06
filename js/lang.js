@@ -1,6 +1,6 @@
 // Localization access for the game modules (content.js): the tables and the
-// lookup live in js/strings.js + js/i18n.js (global MDI18N, which the engine
-// client loads and switches with the player's interface language); outside
+// lookup are the engine's strings (native/i18n.ts sets the global MDI18N, in the
+// player's interface language); outside
 // the engine (Node tests) English keys come back unchanged.
 
 /** Translate an English source string; {name} placeholders are filled from vars. */

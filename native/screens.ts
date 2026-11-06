@@ -11,7 +11,7 @@
 // How to Play with the effective keys and the rules; Settings); the run's HUD
 // (the objective rail with its progress bar and move budget, the stats rail,
 // the pause button, the touch tray); the countdown; the pause panel and the
-// "Welcome back" notice as dialogs; the toasts. The old media queries are
+// "Welcome back" notice as dialogs. The old media queries are
 // layouts picked by the window's logical size: portrait phone (≤ 700 px wide,
 // portrait: the stat labels hidden, the pause button above the tray), short
 // landscape (≤ 480 px tall: slimmer rails, the tray at the side, the pause
@@ -23,7 +23,7 @@ import * as draw from "starhermit:draw";
 import * as ui from "starhermit:ui";
 import { Content, Rules, Save, type Entry } from "./game.ts";
 import * as audio from "./audio.ts";
-import { N, S, T, fmt } from "./i18n.ts";
+import { N, T, fmt } from "./i18n.ts";
 import * as platform from "./platform.ts";
 import {
   ACTION_WORDS, MODE_NAMES, PRACTICE_LEVELS, app, back, canRewind, contentLabel, copyInvite, daily, doAction, hudRects, later,
@@ -35,10 +35,8 @@ import {
 const TB = 56; // the top bar: 44 px buttons inside 6 px padding
 interface Layout { lw: number; lh: number; sc: number; portrait: boolean; short: boolean; compact: boolean }
 function layoutNow(): Layout {
-  const f = frame();
-  const sc = ui.preferences().scale;
-  const sa = f.safeArea;
-  const lw = Math.max(1, (f.width - sa.left - sa.right) / sc), lh = Math.max(1, (f.height - sa.top - sa.bottom) / sc);
+  const v = ui.viewport!();
+  const lw = Math.max(1, v.width), lh = Math.max(1, v.height), sc = v.scale;
   return { lw, lh, sc, portrait: lw <= 700 && lh >= lw, short: lh <= 480 && lw > lh, compact: lw < 1024 };
 }
 /** The top bar's height in window pixels (the street is drawn below it). */
@@ -112,7 +110,6 @@ export function drawScreens(): void {
   }
   overlays(L);
   topbar(L);
-  toasts(L);
   if (app.focusNext) {
     const age = f.frame - app.openedFrame;
     if (age >= 1) ui.setFocus(app.focusNext);
@@ -124,7 +121,7 @@ export function drawScreens(): void {
 function backdrop(cls: string, L: Layout): void {
   const f = frame();
   const top = topbarHeight();
-  ui.place("backdrop", { anchor: "top-start", x: -f.safeArea.left / L.sc, y: -f.safeArea.top / L.sc }, () => {
+  ui.place("backdrop", { anchor: "top-start", x: -ui.viewport!().x, y: -ui.viewport!().y }, () => {
     ui.widget("", { role: "none", size: { width: f.width / L.sc, height: f.height / L.sc }, draw: () => draw.box(0, top, f.width, f.height - top, cls) });
   });
 }
@@ -197,8 +194,8 @@ function titleScreen(w: number, L: Layout): void {
     { id: "btn-settings", text: T("Settings"), act: () => open("settings") },
     { id: "btn-help", text: T("How to Play"), act: () => open("help") },
   ];
-  if (!platform.signedIn()) list.push({ id: "btn-signin", text: S("signIn"), act: signIn });
-  if (platform.inviteLink()) list.push({ id: "btn-invite", text: S("invite"), act: copyInvite });
+  if (!platform.signedIn()) list.push({ id: "btn-signin", text: T("starhermit.signIn"), act: signIn });
+  if (platform.inviteLink()) list.push({ id: "btn-invite", text: T("starhermit.invite"), act: copyInvite });
   if (L.short) flow("title-menu", list, w, 10);
   else stack("title-menu", list, mw, 10);
   para(T("Journey {done}/{stages} · Lessons {lessons}/{lessonTotal} · Total distance {distance}", {
@@ -613,11 +610,3 @@ function interruptPanel(w: number): void {
   ], w);
 }
 
-// ------------------------------------------------------------------ toasts
-function toasts(L: Layout): void {
-  if (!app.toasts.length) return;
-  const w = Math.min(L.lw - 24, 480);
-  ui.place("toasts", { anchor: "top", y: TB + 8 }, () => ui.column("toast-stack", () => app.toasts.forEach((t, i) => {
-    ui.column(`toast-${i}`, () => para(t.text, w - 40, "toast-text", `toast-${i}-t`), { style: "toast", align: "center" });
-  }), { spacing: 8, align: "center" }));
-}

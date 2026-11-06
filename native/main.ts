@@ -28,7 +28,7 @@ import * as ui from "starhermit:ui";
 import { onSessionEnded, requestSignIn } from "starhermit:platform";
 import { Content, RunSession, Rules, Store, type Checkpoint, type Content as Item, type RulesEvent, type RunResult, type Session, type State } from "./game.ts";
 import * as audio from "./audio.ts";
-import { N, S, T, fmt } from "./i18n.ts";
+import { N, T, fmt } from "./i18n.ts";
 import * as platform from "./platform.ts";
 import { lookFor } from "./quality.ts";
 import * as render from "./render.ts";
@@ -58,7 +58,6 @@ export const app = {
   countdown: null as { n: number; ticks: number; text: string } | null,
   results: null as Results | null,
   lb: null as platform.Posted | "posting" | null,
-  toasts: [] as { text: string; until: number }[],
   difficulty: "standard",
   scoreFilter: "all" as "all" | "daily" | "mine",
   confirmReset: false,
@@ -75,10 +74,9 @@ export function announce(text: string, assertive = false): void {
   lastAnnouncement = text;
   ui.announce(text.slice(0, 500), { politeness: assertive ? "assertive" : "polite" });
 }
-/** ui.js toast(): 2.6 s, stacked. */
+/** ui.js toast(): 2.6 s, stacked under the top bar (56 + 8 px, less the stack's 16 px margin). The engine announces it. */
 export function toast(text: string): void {
-  app.toasts.push({ text, until: now() + 2.6 });
-  ui.announce(text, { politeness: "polite" });
+  ui.toast!(text, { duration: 2.6, style: ["toast", "toast-text"], dismissible: false, position: "top", offset: 48 });
 }
 export function click(): void { audio.event("ui"); }
 export function save(): ReturnType<typeof platform.save> { return platform.save(); }
@@ -303,8 +301,8 @@ export function resultsHeadline(): string {
 export function leaderboardLine(): string | null {
   const r = app.lb;
   if (!r) return null;
-  if (r === "posting") return S("lbPosting");
-  return !r.posted ? S("lbNotPosted") : r.rank ? S("lbRank", { rank: r.rank }) : S("lbPosted");
+  if (r === "posting") return T("starhermit.leaderboardPosting");
+  return !r.posted ? T("starhermit.leaderboardNotPosted") : r.rank ? T("starhermit.leaderboardRank", { rank: r.rank }) : T("starhermit.leaderboardPosted");
 }
 export function retry(): void { click(); if (app.results) startRun(app.results.content); }
 export function nextStage(): void { const n = app.results?.nextContent; if (n) selectContent(n); }
@@ -394,7 +392,7 @@ export function copyInvite(): void {
   click();
   const link = platform.inviteLink();
   if (!link) return;
-  try { clipboard.writeText(link); toast(S("copied")); } catch { toast(S("copyFailed")); }
+  try { clipboard.writeText(link); toast(T("starhermit.inviteCopied")); } catch { toast(T("starhermit.inviteFailed")); }
 }
 export function signIn(): void { click(); void requestSignIn().catch(() => undefined); }
 export function toggleMute(): void { audio.setMuted(!audio.isMuted()); click(); }
@@ -509,8 +507,8 @@ onStart(() => {
 });
 onPreferencesChange((p) => render.setReducedMotion(p.reducedMotion));
 platform.onOptionsChange(() => render.setPalette(platform.options.colorPalette));
-platform.onPlayer((on) => { if (!on) toast(S("signedOut")); });
-onSessionEnded(() => toast(S("signedOut"))); // keep playing locally
+platform.onPlayer((on) => { if (!on) toast(T("starhermit.signedOut")); });
+onSessionEnded(() => toast(T("starhermit.signedOut"))); // keep playing locally
 let hidden = false;
 let autoPaused = false;
 onSuspend(() => {
@@ -564,8 +562,6 @@ onUpdate((dt) => {
     lastAnnouncedScore = total;
   }
   audio.update();
-  const t = now();
-  app.toasts = app.toasts.filter((x) => x.until > t);
 });
 const pendingActs: (() => void)[] = [];
 /** A widget's press, run once the frame's UI is built (state changes mid-build would break later widgets). */
