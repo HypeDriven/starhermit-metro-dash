@@ -1,3 +1,4 @@
+import { withLanguageRender as __l10nRender } from "./l10n/menu.ts";
 // Metro Dash on the StarHermit engine: the entry module (starhermit.txt
 // engine.entry), played natively by the StarHermit client and in browsers by
 // the engine's web runtime. The rules (js/rules.js), content (js/content.js)
@@ -566,7 +567,7 @@ onUpdate((dt) => {
 const pendingActs: (() => void)[] = [];
 /** A widget's press, run once the frame's UI is built (state changes mid-build would break later widgets). */
 export function later(fn: () => void): void { pendingActs.push(fn); }
-onRender((alpha) => {
+onRender(__l10nRender((alpha) => {
   hudRects.length = 0;
   drawScreens();
   for (const fn of pendingActs.splice(0)) fn();
@@ -577,4 +578,8 @@ onRender((alpha) => {
   const state = runShown ? s!.state : idle?.state ?? null;
   const a = (runShown ? app.game === "active" : true) ? Math.min(1, Math.max(0, alpha)) : 0;
   render.update(state, a, frameDt, f.time, { top: topbarHeight(), width: f.width, height: f.height });
-});
+}));
+
+// localization-runtime:menu
+import { installLanguageMenu as __installLanguageMenu } from "./l10n/menu.ts";
+__installLanguageMenu(false);
