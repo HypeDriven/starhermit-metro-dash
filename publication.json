@@ -1,0 +1,103 @@
+{
+  "game": {
+    "id": "df8022d1-bb25-467c-948d-0ae7cd5f9c6d",
+    "displayName": "Metro Dash",
+    "hosting": {
+      "hostingEnabled": true,
+      "hostedUrl": "https://df8022d1-bb25-467c-948d-0ae7cd5f9c6d.starhermit.com/index.html",
+      "deployStatus": "live",
+      "pinnedCommitSha": null,
+      "deployedCommitSha": null,
+      "deployError": null,
+      "deployedAt": "2026-11-12T08:15:49.09642+00:00",
+      "externalLaunchUrl": null,
+      "engineVersion": "1.38.0",
+      "deployWarning": null
+    }
+  },
+  "publishedAt": "2026-11-12T08:15:53.924Z",
+  "sourceCommit": "d7f175545d59f50a99e87275df3d33dd88b50caf",
+  "bytesReceived": 1591679,
+  "archiveSha256": "89044d674f422f53cea9584f6eb6f228976edbb9c8b7eb137c53164d456f64e5",
+  "indexSha256": "ddef3d86a3182669aa1be48e97b26c5f9cc63c2a9f1aeaf71ce7fd4ced2a1e84",
+  "result": {
+    "clientPublished": true,
+    "serverImageLoaded": false,
+    "imageDigest": null,
+    "bytesReceived": 1591679,
+    "mode": "replace",
+    "filesRemoved": 0,
+    "engineVersion": "1.38.0",
+    "deployWarning": null
+  },
+  "liveVerification": {
+    "at": "2026-11-12T08:15:53.924Z",
+    "files": [
+      {
+        "file": "starhermit-files.json",
+        "sha256": "ddef3d86a3182669aa1be48e97b26c5f9cc63c2a9f1aeaf71ce7fd4ced2a1e84",
+        "status": 200
+      },
+      {
+        "file": "assets/localization/Hebrew.ttf",
+        "sha256": "585c79ee14b80ba297cff5fcaa2d1852b3e41838174ee445204403a61a60f0c3",
+        "status": 200
+      },
+      {
+        "file": "assets/localization/Japanese.otf",
+        "sha256": "bfa6ff4960a245c73561c7f3263253f913a6eaf993e166d5738fc39fb95ec0e4",
+        "status": 200
+      },
+      {
+        "file": "assets/localization/Khmer.ttf",
+        "sha256": "82a996327e03162bf6dc78f0b1591c63fe568de09675d6d58a29f59cc15cc51d",
+        "status": 200
+      },
+      {
+        "file": "assets/localization/SimplifiedChinese.otf",
+        "sha256": "f290a1df2a41cfd1a0249aaceac32ba152edfd4c39ce78ae53d7cf6edb0d355c",
+        "status": 200
+      },
+      {
+        "file": "assets/localization/Tamil.ttf",
+        "sha256": "c70bc2c368baa466e3dc4d4232e3544d866d56117b7e1e640359d780c9131c79",
+        "status": 200
+      },
+      {
+        "file": "assets/localization/TraditionalChinese.otf",
+        "sha256": "c402a39e98f4eb3fc26dd9eb55549a4082816a9cae3d1f82c3a28a5c8c760ddc",
+        "status": 200
+      },
+      {
+        "file": "assets/localization/common.json",
+        "sha256": "d8a998c8b58812309c6d11a8bb4e703d26e22a292e4eddd10843f6451bad730e",
+        "status": 200
+      },
+      {
+        "file": "assets/localization/fonts.json",
+        "sha256": "37beaea0dba54c9f2c45995cbf9fd19fad21719d701718c41d7e58dd7748ca13",
+        "status": 200
+      },
+      {
+        "file": "assets/localization/locales.json",
+        "sha256": "7bc26aa7c5239a90b72c61db67feffac5b15d59095d08d2c9b0a059adbeecddf",
+        "status": 200
+      },
+      {
+        "file": "assets/strings.json",
+        "sha256": "cebe6486da0ac922281935c9a215a3db62e6533b658c0906056bda7bab3339ac",
+        "status": 200
+      },
+      {
+        "file": "index.html",
+        "sha256": "cd6704c5a4cedac4ec6e8726686e71de8b9a121291f383cea16225e3206a829d",
+        "status": 200
+      },
+      {
+        "file": "starhermit.txt",
+        "sha256": "f6f0d6f28044880c73d6d235385373143159eb0529099037c7e1381dc48f4705",
+        "status": 200
+      }
+    ]
+  }
+}
