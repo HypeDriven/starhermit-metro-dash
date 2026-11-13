@@ -22,7 +22,7 @@
     "assets/ui-style.json": {"sha256": "e6f1e2a38de5f8979d7e0587767dd1b716e343867873e6821dd65c7390733536", "size": 16368},
     "cover.jpg": {"sha256": "06f3151ec59bd6f1dc2926eaf524bb0e31c9095eda06a49038ff30ee3fb00a28", "size": 301351},
     "icon.png": {"sha256": "d341ad1431cb00b074c2922c01c70f183943eda18618eb085e70bf7c92519095", "size": 4763},
-    "index.html": {"sha256": "cd6704c5a4cedac4ec6e8726686e71de8b9a121291f383cea16225e3206a829d", "size": 1934},
+    "index.html": {"sha256": "144fd35d69440bfd7ff29e16f401e6c12fd33cd53f33a93a90ee1a58756bc905", "size": 1934},
     "js/content.js": {"sha256": "d99b539dc9e7374bd2b3cc4acbc7f0c0255a07e457ff152c22626d1e8892b4c5", "size": 16222},
     "js/lang.js": {"sha256": "bab46e5c4aae6370ace319ce5cdab14a1cafa16afd02751783ba698f76f563c9", "size": 754},
     "js/rng.js": {"sha256": "b6a2690fb6c5d3d569347d387851df5d79863b3511c3f7fb6850eb8019d98f4d", "size": 1022},
@@ -42,6 +42,7 @@
     "native/screens.ts": {"sha256": "5e2abc346fff04d465c085b9002ff05e7b9a042ee5acd865d18ba59c405fcfc9", "size": 37515},
     "native/shim.ts": {"sha256": "6e5568ba41257d43aa2bc2269949e604e708dbfb8c1a74ed84fa0253b1b67871", "size": 467},
     "native/style.ts": {"sha256": "2784f32945cb4e8408091ba1539130764e4e250fcc4c3b3668104d72b99f76f5", "size": 2508},
+    "publication.json": {"sha256": "a32d77416da9b7fe364172044bcd53058af18505073148a9ed06e8f46385d69a", "size": 3396},
     "score-script.js": {"sha256": "762eda4323fbe38bb29abf1117ec1d637253e288024f9aa8fcb5735b81ef2902", "size": 2488},
     "sfx/achievement.opus": {"sha256": "812b78928cbdbd9576825cf7b4e3aad2a78eec2a667b5f4fea597ee244f2b27f", "size": 31255},
     "sfx/countdown-beep.opus": {"sha256": "5cc6d31733bbb42e4acf2cb87138892524fd5dd55ab3ba4aabd4e24bc18d08bf", "size": 11815},
@@ -57,7 +58,7 @@
     "sfx/slide.opus": {"sha256": "dab215ec491d0047da7d5dcd1c431b343b5007979a1eb20e9bda4782181bbf9a", "size": 13422},
     "sfx/token-pickup.opus": {"sha256": "52e278de232be50774c082354b06a7094e8c785430dd930f0697605b7cb4d07c", "size": 13553},
     "sfx/ui-tap.opus": {"sha256": "0250a55eb7e396d59b2d087b8b704c6a0743f9b5f8e1d644d1704385f933a472", "size": 12266},
-    "starhermit.txt": {"sha256": "f6f0d6f28044880c73d6d235385373143159eb0529099037c7e1381dc48f4705", "size": 1680}
+    "starhermit.txt": {"sha256": "cb0043dd2febe7cb1be66e5cd6cc5d5e7e09ce4cf2ac209f2f4239adc4e9d3c9", "size": 1680}
   },
   "excluded": ["LICENSE.md", "coverart.png", "knownissues.md", "node_modules/", "package-lock.json", "package.json", "sfx/manifest.json", "sfx/manifest.md", "sfx/manifest.txt", "spec.md", "tests/", "tools/", "tsconfig.json"],
   "format": 1
