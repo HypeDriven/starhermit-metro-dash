@@ -111,7 +111,7 @@ function heading(cls: string, text: string, width: number, id?: string): void {
 function rect(r: ui.Rect): void { hudRects.push({ x: r.x, y: r.y, width: r.width, height: r.height }); }
 
 // ------------------------------------------------------------------ the frame
-export function drawScreens(): void {
+function drawScreensImmediate(): void {
   const L = layoutNow();
   const f = frame();
   if (app.screen === null) runScreen(L);
@@ -632,3 +632,10 @@ function interruptPanel(w: number): void {
   ], w);
 }
 
+
+export function drawScreens(): void {
+  if (app.screen !== "help") { drawScreensImmediate(); return; }
+  const actions = ["left","right","jump","slide","pause"];
+  const version = JSON.stringify([(app as any).settings ?? (app as any).options ?? {}, (platform as any).options ?? {}, actions.map((action) => bindings(action))]);
+  ui.retain!("help-screen", version, drawScreensImmediate);
+}

@@ -30,13 +30,9 @@
 // (the runtime draws everywhere it runs). Cosmetic randomness never touches
 // the rules' stream.
 import {
-  ACESFilmicToneMapping, AdditiveBlending, BackSide, BoxGeometry, BufferAttribute, BufferGeometry, CanvasTexture, CapsuleGeometry, Color,
-  CylinderGeometry, DirectionalLight, DynamicDrawUsage, FogExp2, Group, HemisphereLight, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial,
-  MeshLambertMaterial, MeshPhysicalMaterial, MeshStandardMaterial, OrthographicCamera, PerspectiveCamera, PlaneGeometry, PMREMGenerator, Points, PointsMaterial,
-  RepeatWrapping, RoomEnvironment, ShaderMaterial, SphereGeometry, SRGBColorSpace, TextureLoader, TorusGeometry, Vector3, renderer, scene,
-  type Material, type Object3D, type Texture,
-  ParticleEmitter,
+  ACESFilmicToneMapping, AdditiveBlending, BackSide, BoxGeometry, BufferAttribute, BufferGeometry, CanvasTexture, CapsuleGeometry, Color, CylinderGeometry, DirectionalLight, DynamicDrawUsage, FogExp2, Group, HemisphereLight, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, MeshLambertMaterial, MeshPhysicalMaterial, MeshStandardMaterial, OrthographicCamera, PerspectiveCamera, PlaneGeometry, PMREMGenerator, Points, PointsMaterial, RepeatWrapping, RoomEnvironment, ShaderMaterial, SphereGeometry, SRGBColorSpace, TextureLoader, TorusGeometry, Vector3, renderer, scene, type Material, type Object3D, type Texture,
 } from "starhermit:scene";
+import { GPUParticleEmitter } from "starhermit:particles";
 import { createRandom } from "starhermit:engine";
 import { OffscreenCanvas, type OffscreenCanvasRenderingContext2D } from "starhermit:canvas";
 import { Content, Rules, type RulesEvent, type State } from "./game.ts";
@@ -198,7 +194,7 @@ interface World {
   lamps: InstancedMesh; lampGlows: InstancedMesh; lampGlowMat: MeshBasicMaterial; pools: InstancedMesh; poolMat: MeshBasicMaterial;
   player: Group; board: Mesh; strip: Mesh; hover: Mesh; hoverMat: MeshBasicMaterial;
   obstacles: Record<"barrier" | "sign" | "block", Group[]>; blinkMat: MeshBasicMaterial; coins: Mesh[];
-  sparks: Record<SparkKind, ParticleEmitter>; motes: Points; moteMat: PointsMaterial;
+  sparks: Record<SparkKind, GPUParticleEmitter>; motes: Points; moteMat: PointsMaterial;
 }
 let world: World | null = null;
 let look: Look | null = null;
@@ -441,14 +437,14 @@ function buildWorld(): World {
   // sparks: pooled, bounded, event-tiered; motes drifting past with the run (particles high)
   const sparkMat = new PointsMaterial({ size: 0.45, map: glowTex, transparent: true, opacity: 0.95, depthWrite: false, sizeAttenuation: true });
   const sparkCap = L.particles === "high" ? L.budget.sparks : PARTICLE_LOW;
-  const spark = ({ color, spread }: { color: number; spread: number }, seed: number): ParticleEmitter => {
-    const e = new ParticleEmitter({ capacity: sparkCap, material: sparkMat, seed, space: "local", color, life: 0.625, gravity: [0, -9, 0],
+  const spark = ({ color, spread }: { color: number; spread: number }, seed: number): GPUParticleEmitter => {
+    const e = new GPUParticleEmitter({ capacity: sparkCap, material: sparkMat, seed, space: "local", color, life: 0.625, gravity: [0, -9, 0],
       velocity: [0, spread * 0.4, 0], velocitySpread: [spread / 2, spread * 0.4, spread / 2] });
     e.frustumCulled = false;
     root.add(e);
     return e;
   };
-  const sparks: Record<SparkKind, ParticleEmitter> = { coin: spark(SPARKS.coin, 1), crash: spark(SPARKS.crash, 2), goal: spark(SPARKS.goal, 3) };
+  const sparks: Record<SparkKind, GPUParticleEmitter> = { coin: spark(SPARKS.coin, 1), crash: spark(SPARKS.crash, 2), goal: spark(SPARKS.goal, 3) };
   const moteGeo = new BufferGeometry();
   moteGeo.setAttribute("position", new BufferAttribute(new Float32Array(MOTE_MAX * 3), 3));
   moteGeo.setDrawRange(0, Math.min(MOTE_MAX, L.budget.motes));

@@ -16,7 +16,7 @@ jump, or slide — one tick at a time.
 | Genre | Three-lane endless runner with authored campaign content |
 | Players | 1 (asynchronous competition via a shared daily seed and the platform's high-score board) |
 | Session length | 1–5 minutes per run; a journey stage is ~40–90 s |
-| Platforms | StarHermit engine script game (engine 1.39.0, host API 1.39, `engine.minor=39`): played natively by the StarHermit client and in browsers by the engine's web runtime; desktop, phones (portrait and landscape), gamepads |
+| Platforms | StarHermit engine script game (engine 1.44.1, host API 1.44, `engine.minor=44`): played natively by the StarHermit client and in browsers by the engine's web runtime; desktop, phones (portrait and landscape), gamepads |
 | Rendering | `starhermit:scene` (three.js r185-parity scene graph; the old build used three.js r160) and `starhermit:ui` / `starhermit:draw` for every screen and the HUD |
 | Simulation | Deterministic 30 tps rules (`js/rules.js`), one rules step per runtime fixed step (`setFixedRate(30)`); no wall clock inside the rules |
 | Persistence | The engine save (`starhermit:storage saves`: device + the player's cloud slot), the game's options as engine settings, interrupted-run snapshots in device storage |
@@ -25,7 +25,7 @@ jump, or slide — one tick at a time.
 
 | Path | Responsibility |
 |---|---|
-| `starhermit.txt` | Manifest: name, owner, server (`score-script.js`), cover, `launch=index.html`, `engine.*` (entry `native/main.ts`, version 1.39.0, minor 32, capabilities platform/storage/clipboard), the five actions with keyboard and gamepad defaults. |
+| `starhermit.txt` | Manifest: name, owner, server (`score-script.js`), cover, `launch=index.html`, `engine.*` (entry `native/main.ts`, version 1.44.1, minor 32, capabilities platform/storage/clipboard), the five actions with keyboard and gamepad defaults. |
 | `index.html`, `starhermit-files.json` | The engine's web loader and package file index, written by `npm run package` (`starhermit package --web .`); never edited by hand. |
 | `native/main.ts` | Entry module: flow state machine (title → mode screens → briefing → countdown → run ⇄ pause → results), input (actions, swipes, tray), rules events → sound/sparks/announcements, progression, achievements, local board, leaderboard posting, Practice rewind, "Welcome back" resume, the attract run, lifecycle. |
 | `native/screens.ts` | Every screen, the top bar, HUD, tray, countdown, pause and "Welcome back" dialogs, toasts on `starhermit:ui`; the layouts. |
@@ -550,3 +550,11 @@ face, kiosk face and screen, the radial glow) are painted at start on the engine
 The string tables include complete regional variants for `fr-BE`, `de-BE`, `en-SG`, `en-HK`, `en-BQ`, `es-CO`, `de-IT`, `fr-IT`, `es-CL`, `es-AR`, `es-EC`, `de-BR`. These reuse the corresponding existing translations in their language family. The runtime can resolve the exact regional tag. Language selection is available from the game’s Options panel or F2 and is saved per player in `ui.language`. Changes apply during play. Additional national, regional and indigenous language packs are only shipped once every English message has a translation with intact placeholders and markup. Complete additional language tables: `ja-JP`, `nl-BE`, `zh-SG`, `ms-SG`, `ta-SG`, `zh-HK`, `yue-HK`, `nl-NL`, `fi-FI`, `sv-FI`, `et-EE`, `id-ID`, `vi-VN`, `da-DE`, `lb-BE`, `eu-FR`, `oc-FR`, `sl-IT`, `oc-IT`, `eu-ES`, `su-ID`, `ru-FI`, `ru-EE`, `co-FR`, `ca-FR`, `fur-IT`, `ca-IT`, `ca-ES`, `gl-ES`, `bew-ID`, `km-VN`.
 
 <!-- regional-localization:end -->
+
+Cosmetic particle emitters use native GPU particles with automatic CPU fallback on devices or graphics tiers without GPU particle support.
+
+## Engine 1.44.1
+
+Browser play uses the WebGPU-only StarHermit 1.44.1 web runtime. Automatic ray-traced shadows are enabled on supported Vulkan devices, with mapped-shadow fallbacks elsewhere. Packaging creates block-compressed runtime textures and compressed glTF copies, retaining original image fallbacks.
+
+The help screen replays through retained native UI while its contents, options, layout and key bindings are unchanged.
